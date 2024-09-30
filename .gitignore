@@ -195,3 +195,7 @@ cython_debug/
 #.idea/
 
 
+.DS_Store
+**/.DS_Store
+tmp/
+**/tmp/
