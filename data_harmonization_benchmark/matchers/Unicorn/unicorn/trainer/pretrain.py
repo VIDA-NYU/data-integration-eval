@@ -41,11 +41,17 @@ def train_moe(
         classifiers.train()
         for i in range(len(train_data_loaders)):
             for step, pair in enumerate(train_data_loaders[i]):
-                values1 = make_cuda(pair[0])
-                mask1 = make_cuda(pair[1])
-                segment1 = make_cuda(pair[2])
+                if args.use_gpu:
+                    values1 = make_cuda(pair[0])
+                    mask1 = make_cuda(pair[1])
+                    segment1 = make_cuda(pair[2])
 
-                labels = make_cuda(pair[3])
+                    labels = make_cuda(pair[3])
+                else:
+                    values1 = pair[0]
+                    mask1 = pair[1]
+                    segment1 = pair[2]
+                    labels = pair[3]
 
                 # zero gradients for optimizer
                 optimizer0.zero_grad()
@@ -167,11 +173,17 @@ def train_wo_moe(
         classifiers.train()
         for i in range(len(train_data_loaders)):
             for step, pair in enumerate(train_data_loaders[i]):
-                values1 = make_cuda(pair[0])
-                mask1 = make_cuda(pair[1])
-                segment1 = make_cuda(pair[2])
+                if args.use_gpu:
+                    values1 = make_cuda(pair[0])
+                    mask1 = make_cuda(pair[1])
+                    segment1 = make_cuda(pair[2])
 
-                labels = make_cuda(pair[3])
+                    labels = make_cuda(pair[3])
+                else:
+                    values1 = pair[0]
+                    mask1 = pair[1]
+                    segment1 = pair[2]
+                    labels = pair[3]
 
                 # zero gradients for optimizer
                 optimizer0.zero_grad()

@@ -6,6 +6,49 @@ from unicorn.dataprocess import dataformat
 from unicorn.utils.utils import make_cuda
 
 
+def predict_moe(encoder, moelayer, classifier, data_loader, source, target, ground_truth, args=None):
+    encoder.eval()
+    moelayer.eval()
+    classifier.eval()
+
+    for reviews, mask, segment, labels, exm_id, task_id in data_loader:
+        if args.use_gpu:
+            reviews = make_cuda(reviews)
+            mask = make_cuda(mask)
+            segment = make_cuda(segment)
+            labels = make_cuda(labels)
+        with torch.no_grad():
+            if args.model in ["distilbert", "distilroberta"]:
+                feat = encoder(reviews, mask)
+            else:
+                feat = encoder(reviews, mask, segment)
+            if args.load_balance:
+                moeoutput, balanceloss, _, gateweights = moelayer(feat)
+                averagegateweight += gateweights
+            else:
+                moeoutput, gateweights = moelayer(feat)
+                averagegateweight += gateweights
+            preds = classifier(moeoutput)
+            
+
+            
+            pred_cls = preds.data.numpy()
+            match_scores = [scores[1] for scores in pred_cls]
+            
+            matches = {}
+            for idx, row in enumerate(ground_truth.itertuples()):
+                source_colname = row.source
+
+                for target_colname in target.columns:
+                    matches[
+                        (
+                            ("source", source_colname),
+                            ("target", target_colname),
+                        )
+                    ] = match_scores[idx]
+            return matches
+
+
 def evaluate_moe(
     encoder,
     moelayer,
@@ -37,12 +80,16 @@ def evaluate_moe(
     # evaluate network
     confidences = {}
     probility = {}
-    averagegateweight = torch.Tensor([0 for _ in range(args.expertsnum)]).cuda()
+    if args.use_gpu:
+        averagegateweight = torch.Tensor([0 for _ in range(args.expertsnum)]).cuda()
+    else:
+        averagegateweight = torch.Tensor([0 for _ in range(args.expertsnum)])
     for reviews, mask, segment, labels, exm_id, task_id in data_loader:
-        reviews = make_cuda(reviews)
-        mask = make_cuda(mask)
-        segment = make_cuda(segment)
-        labels = make_cuda(labels)
+        if args.use_gpu:
+            reviews = make_cuda(reviews)
+            mask = make_cuda(mask)
+            segment = make_cuda(segment)
+            labels = make_cuda(labels)
         truelen = torch.sum(mask, dim=1)
 
         with torch.no_grad():
@@ -179,10 +226,11 @@ def evaluate_wo_moe(
     confidences = {}
     probility = {}
     for reviews, mask, segment, labels, exm_id, _ in data_loader:
-        reviews = make_cuda(reviews)
-        mask = make_cuda(mask)
-        segment = make_cuda(segment)
-        labels = make_cuda(labels)
+        if args.use_gpu:
+            reviews = make_cuda(reviews)
+            mask = make_cuda(mask)
+            segment = make_cuda(segment)
+            labels = make_cuda(labels)
         truelen = torch.sum(mask, dim=1)
 
         with torch.no_grad():

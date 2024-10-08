@@ -65,6 +65,8 @@ class TrainApp:
         shuffle=0,
         load_balance=0,
         usecase_path=None,
+        valentine_output=True,
+        use_gpu=False,
     ):
         self.pretrain = pretrain
         self.seed = seed
@@ -94,6 +96,8 @@ class TrainApp:
         self.shuffle = shuffle
         self.load_balance = load_balance
         self.usecase_path = usecase_path
+        self.valentine_output = valentine_output
+        self.use_gpu = use_gpu
 
     def get_args(self):
         d = AttrDict()
@@ -126,6 +130,9 @@ class TrainApp:
                 units=self.units,
                 shuffle=self.shuffle,
                 load_balance=self.load_balance,
+                usecase_path=self.usecase_path,
+                valentine_output=self.valentine_output,
+                use_gpu=self.use_gpu,
             )
         )
         return d
@@ -343,7 +350,7 @@ class TrainApp:
 
         test_sets = []
         test_metrics = []
-
+        
         if self.usecase_path:
             test = self.parse_data_dir_gdc(self.usecase_path, is_test=True)
             test_sets.append(test)
@@ -425,56 +432,56 @@ class TrainApp:
                 )
 
         print("test datasets num: ", len(test_data_loaders))
-        f1s = []
-        recalls = []
-        accs = []
-        for k in range(len(test_data_loaders)):
-            print("test datasets : ", k + 1)
-            if test_metrics[k] == "hit":  # for EA
+        if self.valentine_output:
+            source, target, ground_truth = self.parse_dataset(self.usecase_path)
+            matches = evaluate.predict_moe(
+                encoder,
+                moelayer,
+                classifiers,
+                test_data_loaders[0],
+                source,
+                target,
+                ground_truth,
+                args=self.get_args(),
+            )
+            print("Matches:", matches)
+        else:
+            f1s = []
+            recalls = []
+            accs = []
+            for k in range(len(test_data_loaders)):
+                print("test datasets : ", k + 1)
                 if self.wmoe:
-                    prob = evaluate.evaluate_moe(
+                    f1, recall, acc = evaluate.evaluate_moe(
                         encoder,
                         moelayer,
                         classifiers,
                         test_data_loaders[k],
                         args=self.get_args(),
-                        flag="get_prob",
-                        prob_name="prob.json",
+                        all=1,
                     )
                 else:
-                    prob = evaluate.evaluate_wo_moe(
+                    f1, recall, acc = evaluate.evaluate_wo_moe(
                         encoder,
                         classifiers,
                         test_data_loaders[k],
                         args=self.get_args(),
-                        flag="get_prob",
-                        prob_name="prob.json",
+                        all=1,
                     )
-                evaluate.calculate_hits_k(test_sets[k], prob)
-                continue
-            if self.wmoe:
-                f1, recall, acc = evaluate.evaluate_moe(
-                    encoder,
-                    moelayer,
-                    classifiers,
-                    test_data_loaders[k],
-                    args=self.get_args(),
-                    all=1,
-                )
-            else:
-                f1, recall, acc = evaluate.evaluate_wo_moe(
-                    encoder,
-                    classifiers,
-                    test_data_loaders[k],
-                    args=self.get_args(),
-                    all=1,
-                )
-            f1s.append(f1)
-            recalls.append(recall)
-            accs.append(acc)
-        print("F1: ", f1s)
-        print("Recall: ", recalls)
-        print("ACC.", accs)
+                f1s.append(f1)
+                recalls.append(recall)
+                accs.append(acc)
+            print("F1: ", f1s)
+            print("Recall: ", recalls)
+            print("ACC.", accs)
+
+
+    def parse_dataset(self, data_dir):
+        data_name = data_dir
+        source = pd.read_csv(os.path.join(data_dir, "source.csv"))
+        target = pd.read_csv(os.path.join(data_dir, "target.csv"))
+        ground_truth = pd.read_csv(os.path.join(data_dir, "groundtruth.csv"))
+        return source, target, ground_truth
 
     def parse_data_dir_gdc(self, data_dir, is_test=False):
         data_name = data_dir
@@ -502,18 +509,18 @@ class TrainApp:
             source_str = f"[ATT] {source_colname} [VAL] {' [VAL] '.join(str(x) for x in list(source_values))}"
 
             matching_targets = [target.strip() for target in row.target.split(";")]
-            if True:
-                for target_colname in matching_targets:
-                    target_values = target[target_colname].unique()[:20]
-                    target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
-                    dataset_json.append([source_str, target_str, 1])
+            # if True:
+            #     for target_colname in matching_targets:
+            #         target_values = target[target_colname].unique()[:20]
+            #         target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
+            #         dataset_json.append([source_str, target_str, 1])
 
-            else:
-                for target_colname in target.columns:
-                    is_matching = 0
-                    if target_colname in matching_targets:
-                        is_matching = 1
-                    target_values = target[target_colname].unique()[:20]
-                    target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
-                    dataset_json.append([source_str, target_str, is_matching])
+            # else:
+            for target_colname in target.columns:
+                is_matching = 0
+                if target_colname in matching_targets:
+                    is_matching = 1
+                target_values = target[target_colname].unique()[:20]
+                target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
+                dataset_json.append([source_str, target_str, is_matching])
         return dataset_json
