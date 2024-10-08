@@ -1,9 +1,11 @@
-from ISResMat import TrainApp
-from typing import Optional, Dict, Any
-import pandas as pd
 import logging
+from typing import Any, Dict, Optional
+
+import pandas as pd
+from ISResMat import TrainApp
 
 logger = logging.getLogger(__name__)
+
 
 def matching(
     usecase: str,
@@ -19,12 +21,12 @@ def matching(
         learning_rate=3e-5,
     ),
 ):
-    data_dir=usecase_path
-    data_name=usecase
-    src_orig_file=source
-    tgt_orig_file=target
-    golden_mappings=f"{data_dir}/groundtruth.csv"
-    
+    data_dir = usecase_path
+    data_name = usecase
+    src_orig_file = source
+    tgt_orig_file = target
+    golden_mappings = f"{data_dir}/groundtruth.csv"
+
     isresmat = TrainApp(
         col_name_prob=0,
         store_matches=0,
@@ -34,7 +36,9 @@ def matching(
         orig_file_tgt=tgt_orig_file,
         orig_file_golden_matches=golden_mappings,
         process_mode=1,
-        n_val_cols=1, **config)
+        n_val_cols=1,
+        **config,
+    )
 
     isresmat.do_trn(1)
     isresmat.eval_to_match()

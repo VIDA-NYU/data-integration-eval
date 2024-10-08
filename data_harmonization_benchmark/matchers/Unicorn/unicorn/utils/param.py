@@ -1,5 +1,3 @@
-
-
 PAD = 0
 UNK = 1
 SOS = 2
@@ -12,4 +10,3 @@ cls_path = "cls.pt"
 model_root = "checkpoint"
 num_labels = 2
 hidden_size = 768
-

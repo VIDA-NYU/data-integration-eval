@@ -1,6 +1,7 @@
 # https://github.com/delftdata/valentine/tree/v1.1
 
 import json
+
 import pandas as pd
 
 
@@ -24,7 +25,9 @@ class GoldenStandardLoader:
         Function that checks if a mapping is in the golden standard
     """
 
-    def __init__(self, path, src_removed_empty_cols_ls=None, tgt_removed_empty_cols_ls=None):
+    def __init__(
+        self, path, src_removed_empty_cols_ls=None, tgt_removed_empty_cols_ls=None
+    ):
         """
         Parameters
         ----------
@@ -33,9 +36,13 @@ class GoldenStandardLoader:
         """
         self.expected_matches = set()
         self.size = 0
-        self.load_golden_standard(path, src_removed_empty_cols_ls, tgt_removed_empty_cols_ls)
+        self.load_golden_standard(
+            path, src_removed_empty_cols_ls, tgt_removed_empty_cols_ls
+        )
 
-    def load_golden_standard(self, path: str, src_removed_empty_cols_ls=None, tgt_removed_empty_cols_ls=None):
+    def load_golden_standard(
+        self, path: str, src_removed_empty_cols_ls=None, tgt_removed_empty_cols_ls=None
+    ):
         """
         Function that loads the golden standard from a JSON file
 
@@ -48,21 +55,17 @@ class GoldenStandardLoader:
             src_removed_empty_cols_ls = []
         if tgt_removed_empty_cols_ls is None:
             tgt_removed_empty_cols_ls = []
-        
 
         golden_std = pd.read_csv(path)
         for row in golden_std.itertuples():
-            if row.source not in src_removed_empty_cols_ls and \
-                    row.target not in tgt_removed_empty_cols_ls:
+            if (
+                row.source not in src_removed_empty_cols_ls
+                and row.target not in tgt_removed_empty_cols_ls
+            ):
                 self.expected_matches.add(
-                    frozenset(
-                        (("source", row.source),
-                        ("target", row.target))
-                    )
+                    frozenset((("source", row.source), ("target", row.target)))
                 )
         self.size = len(self.expected_matches)
-        
-        
 
     def is_in_golden_standard(self, mapping: set):
         """

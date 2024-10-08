@@ -1,18 +1,18 @@
 import io
 import itertools
+import math
 from datetime import datetime
 from pathlib import Path
 
-import math
 import numpy as np
 import pytz
 import torchvision.transforms.functional as TF
-from PIL import Image
 from matplotlib import pyplot as plt
+from PIL import Image
 
 
-def get_local_time(time_format='%Y-%m-%d_%H.%M.%S'):
-    time_zone = pytz.timezone('Asia/Shanghai')
+def get_local_time(time_format="%Y-%m-%d_%H.%M.%S"):
+    time_zone = pytz.timezone("Asia/Shanghai")
     ctime = datetime.now(time_zone).strftime(time_format)
     return ctime
 
@@ -75,21 +75,29 @@ def plot_matrix(sim_matrix, fig_title, xticks, yticks, xlabel, ylabel):
     assert len(xticks) == sim_matrix.shape[1]
     assert len(yticks) == sim_matrix.shape[0]
     figure = plt.figure(figsize=(8, 8))
-    plt.imshow(sim_matrix, interpolation='nearest', cmap=plt.cm.Blues)
+    plt.imshow(sim_matrix, interpolation="nearest", cmap=plt.cm.Blues)
     plt.title(fig_title)
     plt.colorbar()
 
     # tick_marks = np.arange(len(class_names))
     plt.yticks(np.arange(len(yticks)), yticks, rotation=45)
-    plt.xticks(np.arange(len(xticks)), xticks, rotation=45, horizontalalignment='right')
+    plt.xticks(np.arange(len(xticks)), xticks, rotation=45, horizontalalignment="right")
 
     # more classes means small room, so no text
     if len(xticks) <= 12 and len(yticks) <= 12:
         # Use white text if squares are dark; otherwise black.
-        threshold = sim_matrix.max() / 2.
-        for i, j in itertools.product(range(sim_matrix.shape[0]), range(sim_matrix.shape[1])):
+        threshold = sim_matrix.max() / 2.0
+        for i, j in itertools.product(
+            range(sim_matrix.shape[0]), range(sim_matrix.shape[1])
+        ):
             color = "white" if sim_matrix[i, j] > threshold else "black"
-            plt.text(j, i, "{:.2f}".format(sim_matrix[i, j].item()), horizontalalignment="center", color=color)
+            plt.text(
+                j,
+                i,
+                "{:.2f}".format(sim_matrix[i, j].item()),
+                horizontalalignment="center",
+                color=color,
+            )
 
     plt.tight_layout()
     plt.ylabel(ylabel)
@@ -100,7 +108,7 @@ def plot_matrix(sim_matrix, fig_title, xticks, yticks, xlabel, ylabel):
 def plot_to_image(figure):
     # Save the plot to a PNG in memory.
     buf = io.BytesIO()
-    plt.savefig(buf, format='png')
+    plt.savefig(buf, format="png")
     plt.close(figure)
     buf.seek(0)
 

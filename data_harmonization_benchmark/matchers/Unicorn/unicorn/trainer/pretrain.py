@@ -1,24 +1,31 @@
+import copy
+import datetime
+
+import numpy as np
 import torch.nn as nn
 import torch.optim as optim
-import datetime
-import copy
-import numpy as np
-from unicorn.utils.utils import make_cuda, save_model
 from unicorn.utils import param
+from unicorn.utils.utils import make_cuda, save_model
+
 from .evaluate import evaluate_moe, evaluate_wo_moe
 
-def train_moe(args, encoder, moelayer, classifiers,
-            train_data_loaders, valid_data_loaders=None, metrics=None, need_save_model=True):
-    
+
+def train_moe(
+    args,
+    encoder,
+    moelayer,
+    classifiers,
+    train_data_loaders,
+    valid_data_loaders=None,
+    metrics=None,
+    need_save_model=True,
+):
     # setup criterion and optimizer
-    optimizer0 = optim.Adam(list(encoder.parameters()),
-                           lr=args.c_learning_rate)
-    
-    optimizerm = optim.Adam(list(moelayer.parameters()),
-                           lr=args.c_learning_rate)
-    
-    optimizers = optim.Adam(list(classifiers.parameters()),
-                           lr=args.c_learning_rate)              
+    optimizer0 = optim.Adam(list(encoder.parameters()), lr=args.c_learning_rate)
+
+    optimizerm = optim.Adam(list(moelayer.parameters()), lr=args.c_learning_rate)
+
+    optimizers = optim.Adam(list(classifiers.parameters()), lr=args.c_learning_rate)
     CELoss = nn.CrossEntropyLoss()
 
     start = datetime.datetime.now()
@@ -46,18 +53,22 @@ def train_moe(args, encoder, moelayer, classifiers,
                 optimizers.zero_grad()
 
                 # compute loss for discriminator
-                if args.model in ['distilbert','distilroberta']:
-                    feat = encoder(values1,mask1)
+                if args.model in ["distilbert", "distilroberta"]:
+                    feat = encoder(values1, mask1)
                 else:
                     feat = encoder(values1, mask1, segment1)
                 if args.load_balance:
-                    moeoutput,balanceloss,entroloss,_ = moelayer(feat)
+                    moeoutput, balanceloss, entroloss, _ = moelayer(feat)
                 else:
-                    moeoutput,_ = moelayer(feat)
+                    moeoutput, _ = moelayer(feat)
                 preds = classifiers(moeoutput)
                 cls_loss = CELoss(preds, labels)
                 if args.load_balance:
-                    loss = cls_loss + args.balance_loss*balanceloss + args.entroloss*entroloss
+                    loss = (
+                        cls_loss
+                        + args.balance_loss * balanceloss
+                        + args.entroloss * entroloss
+                    )
                 else:
                     loss = cls_loss
                 # optimize source classifier
@@ -69,41 +80,50 @@ def train_moe(args, encoder, moelayer, classifiers,
                 # print step info
                 if args.load_balance:
                     if (step + 1) % args.pre_log_step == 0:
-                        print("Epoch [%.2d/%.2d] Step [%.3d]: cls_loss=%.4f %4f %4f"
-                            % (epoch + 1,
+                        print(
+                            "Epoch [%.2d/%.2d] Step [%.3d]: cls_loss=%.4f %4f %4f"
+                            % (
+                                epoch + 1,
                                 args.pre_epochs,
                                 step + 1,
                                 cls_loss.item(),
                                 balanceloss.item(),
-                                entroloss.item()))
+                                entroloss.item(),
+                            )
+                        )
                 else:
                     if (step + 1) % args.pre_log_step == 0:
-                        print("Epoch [%.2d/%.2d] Step [%.3d]: cls_loss=%.4f"
-                            % (epoch + 1,
-                                args.pre_epochs,
-                                step + 1,
-                                cls_loss.item()))
+                        print(
+                            "Epoch [%.2d/%.2d] Step [%.3d]: cls_loss=%.4f"
+                            % (epoch + 1, args.pre_epochs, step + 1, cls_loss.item())
+                        )
 
         if valid_data_loaders:
             avg_valid = []
             for k in range(len(valid_data_loaders)):
-                print("valid  datasets : ",k+1)
-                f1,recall,acc = evaluate_moe(encoder, moelayer, classifiers, valid_data_loaders[k], args=args, all=1)
-                if metrics[k]=='f1':
+                print("valid  datasets : ", k + 1)
+                f1, recall, acc = evaluate_moe(
+                    encoder,
+                    moelayer,
+                    classifiers,
+                    valid_data_loaders[k],
+                    args=args,
+                    all=1,
+                )
+                if metrics[k] == "f1":
                     avg_valid.append(f1)
-                if metrics[k]=='recall':
+                if metrics[k] == "recall":
                     avg_valid.append(recall)
-                if metrics[k]=='acc' or metrics[k]=='hit':
+                if metrics[k] == "acc" or metrics[k] == "hit":
                     avg_valid.append(acc)
             if np.mean(avg_valid) > bestf1:
-                print("best epoch number: ",epoch)
+                print("best epoch number: ", epoch)
                 bestf1 = np.mean(avg_valid)
 
                 best_encoder = copy.deepcopy(encoder)
                 best_moelayer = copy.deepcopy(moelayer)
                 best_classifiers = copy.deepcopy(classifiers)
-        
-    
+
     if not valid_data_loaders:
         best_encoder = copy.deepcopy(encoder)
         best_moelayer = copy.deepcopy(moelayer)
@@ -111,23 +131,29 @@ def train_moe(args, encoder, moelayer, classifiers,
 
     if need_save_model:
         print("save model")
-        save_model(best_encoder, args.modelname+"_"+param.encoder_path)
-        save_model(best_moelayer, args.modelname+"_"+param.moe_path)
-        save_model(best_classifiers, args.modelname+"_"+param.cls_path)
-    
+        save_model(best_encoder, args.modelname + "_" + param.encoder_path)
+        save_model(best_moelayer, args.modelname + "_" + param.moe_path)
+        save_model(best_classifiers, args.modelname + "_" + param.cls_path)
+
     end = datetime.datetime.now()
-    print("Time: ",end-start)
+    print("Time: ", end - start)
     return best_encoder, best_moelayer, best_classifiers
 
-def train_wo_moe(args, encoder, classifiers,
-            train_data_loaders, valid_data_loaders=None, metrics=None, need_save_model=True, draw=True):
-    
+
+def train_wo_moe(
+    args,
+    encoder,
+    classifiers,
+    train_data_loaders,
+    valid_data_loaders=None,
+    metrics=None,
+    need_save_model=True,
+    draw=True,
+):
     # setup criterion and optimizer
-    optimizer0 = optim.Adam(list(encoder.parameters()),
-                           lr=args.c_learning_rate)
-    
-    optimizers = optim.Adam(list(classifiers.parameters()),
-                           lr=args.c_learning_rate)              
+    optimizer0 = optim.Adam(list(encoder.parameters()), lr=args.c_learning_rate)
+
+    optimizers = optim.Adam(list(classifiers.parameters()), lr=args.c_learning_rate)
     CELoss = nn.CrossEntropyLoss()
 
     start = datetime.datetime.now()
@@ -152,8 +178,8 @@ def train_wo_moe(args, encoder, classifiers,
                 optimizers.zero_grad()
 
                 # compute loss for discriminator
-                if args.model in ['distilbert','distilroberta']:
-                    feat = encoder(values1,mask1)
+                if args.model in ["distilbert", "distilroberta"]:
+                    feat = encoder(values1, mask1)
                 else:
                     feat = encoder(values1, mask1, segment1)
                 preds = classifiers(feat)
@@ -166,25 +192,26 @@ def train_wo_moe(args, encoder, classifiers,
 
                 # print step info
                 if (step + 1) % args.pre_log_step == 0:
-                    print("Epoch [%.2d/%.2d] Step [%.3d]: cls_loss=%.4f"
-                        % (epoch + 1,
-                            args.pre_epochs,
-                            step + 1,
-                            cls_loss.item()))
-        
+                    print(
+                        "Epoch [%.2d/%.2d] Step [%.3d]: cls_loss=%.4f"
+                        % (epoch + 1, args.pre_epochs, step + 1, cls_loss.item())
+                    )
+
         if valid_data_loaders != None:
             avg_valid = []
             for k in range(len(valid_data_loaders)):
-                print("valid  datasets : ",k+1)
-                f1,recall,acc = evaluate_wo_moe(encoder, classifiers, valid_data_loaders[k],args=args,all=1)
-                if metrics[k]=='f1':
+                print("valid  datasets : ", k + 1)
+                f1, recall, acc = evaluate_wo_moe(
+                    encoder, classifiers, valid_data_loaders[k], args=args, all=1
+                )
+                if metrics[k] == "f1":
                     avg_valid.append(f1)
-                if metrics[k]=='recall':
+                if metrics[k] == "recall":
                     avg_valid.append(recall)
-                if metrics[k]=='acc' or metrics[k]=='hit':
+                if metrics[k] == "acc" or metrics[k] == "hit":
                     avg_valid.append(acc)
             if np.mean(avg_valid) > bestf1:
-                print("best epoch number: ",epoch)
+                print("best epoch number: ", epoch)
                 bestf1 = np.mean(avg_valid)
 
                 best_encoder = copy.deepcopy(encoder)
@@ -196,11 +223,9 @@ def train_wo_moe(args, encoder, classifiers,
 
     if need_save_model:
         print("save model")
-        save_model(best_encoder, args.modelname+"_"+param.encoder_path)
-        save_model(best_classifiers, args.modelname+"_"+param.cls_path)
-    
+        save_model(best_encoder, args.modelname + "_" + param.encoder_path)
+        save_model(best_classifiers, args.modelname + "_" + param.cls_path)
+
     end = datetime.datetime.now()
-    print("Time: ",end-start)
+    print("Time: ", end - start)
     return best_encoder, best_classifiers
-
-

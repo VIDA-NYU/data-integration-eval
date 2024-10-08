@@ -154,7 +154,9 @@ def f1_score(matches: dict, golden_standard: GoldenStandardLoader, one_to_one=Fa
     return 2 * ((pr * re) / (pr + re))
 
 
-def precision_at_n_percent(matches: dict, golden_standard: GoldenStandardLoader, n: int):
+def precision_at_n_percent(
+    matches: dict, golden_standard: GoldenStandardLoader, n: int
+):
     """
     Function that calculates the precision at n %
     e.g. if n is 10 then only the first 10% of the matches will be considered for the precision calculation

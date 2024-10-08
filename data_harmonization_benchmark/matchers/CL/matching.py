@@ -1,11 +1,9 @@
-from bdikit.mapping_algorithms.column_mapping.topk_matchers import (
-    CLTopkColumnMatcher,
-)
-from bdikit.models.contrastive_learning.cl_api import (
-    DEFAULT_CL_MODEL,
-)
+from typing import Any, Dict, Optional
+
 import pandas as pd
-from typing import Optional, Dict, Any
+from bdikit.mapping_algorithms.column_mapping.topk_matchers import CLTopkColumnMatcher
+from bdikit.models.contrastive_learning.cl_api import DEFAULT_CL_MODEL
+
 
 def matching(
     usecase: str,
@@ -15,13 +13,10 @@ def matching(
     top_k: int = 10,
     config: Optional[Dict[str, Any]] = dict(),
 ):
-    
     matcher = CLTopkColumnMatcher(DEFAULT_CL_MODEL)
 
-    matches = matcher.get_recommendations(
-                source, target, top_k=top_k, **config
-            )
-    
+    matches = matcher.get_recommendations(source, target, top_k=top_k, **config)
+
     output = {}
     for match in matches:
         source = match["source_column"]

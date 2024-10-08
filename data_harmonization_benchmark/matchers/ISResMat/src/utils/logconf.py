@@ -3,19 +3,20 @@ import logging
 
 import pytz
 
-basic_format = '%(asctime)s %(levelname)s %(message)s'
+basic_format = "%(asctime)s %(levelname)s %(message)s"
+
 
 class Formatter(logging.Formatter):
     def converter(self, timestamp):
         dt = datetime.datetime.fromtimestamp(timestamp, pytz.UTC)
-        return dt.astimezone(pytz.timezone('Asia/Shanghai'))
+        return dt.astimezone(pytz.timezone("Asia/Shanghai"))
 
     def formatTime(self, record, datefmt=None):
         dt = self.converter(record.created)
         if datefmt:
             s = dt.strftime(datefmt)
         else:
-            s = dt.strftime('%Y-%m-%d %H:%M:%S')
+            s = dt.strftime("%Y-%m-%d %H:%M:%S")
             # s = dt.isoformat(sep=' ', timespec='milliseconds')
         return s
 

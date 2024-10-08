@@ -30,9 +30,7 @@ def parse_results(source, target, matcher, runtime, all_metrics, output):
 
     for metrix_name, score in all_metrics.items():
         results[metrix_name] = score
-    
-    result_df = pd.DataFrame(
-        results
-    )
+
+    result_df = pd.DataFrame(results)
 
     save_result_csv(result_df, output, append=True)

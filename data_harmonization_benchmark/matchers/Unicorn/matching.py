@@ -1,9 +1,11 @@
-from unicorn_zero import TrainApp
-from typing import Optional, Dict, Any
-import pandas as pd
 import logging
+from typing import Any, Dict, Optional
+
+import pandas as pd
+from unicorn_zero import TrainApp
 
 logger = logging.getLogger(__name__)
+
 
 def matching(
     usecase: str,
@@ -18,12 +20,12 @@ def matching(
         modelname="UnicornZero",
     ),
 ):
-    data_dir=usecase_path
-    data_name=usecase
-    src_orig_file=source
-    tgt_orig_file=target
-    golden_mappings=f"{data_dir}/groundtruth.csv"
-    
+    data_dir = usecase_path
+    data_name = usecase
+    src_orig_file = source
+    tgt_orig_file = target
+    golden_mappings = f"{data_dir}/groundtruth.csv"
+
     unicorn = TrainApp(usecase_path=usecase_path, **config)
 
     unicorn.main()

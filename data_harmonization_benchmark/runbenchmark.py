@@ -26,7 +26,13 @@ def main():
         "-o", "--output", type=str, help="Output file path", default="results.csv"
     )
     parser.add_argument("-n", "--n-jobs", type=int, help="Number of jobruns", default=1)
-    parser.add_argument("-k", "--top-k", type=int, help="Top k results for matching candidates", default=10)
+    parser.add_argument(
+        "-k",
+        "--top-k",
+        type=int,
+        help="Top k results for matching candidates",
+        default=10,
+    )
 
     args = parser.parse_args()
 
@@ -56,12 +62,13 @@ def main():
         target=target,
         ground_truth=ground_truth,
         n_jobs=args.n_jobs,
-        top_k=args.top_k
+        top_k=args.top_k,
     )
 
     all_metrics, runtime = matching(config, args.matcher)
 
     parse_results(source, target, args.matcher, runtime, all_metrics, args.output)
+
 
 if __name__ == "__main__":
     main()

@@ -78,8 +78,3 @@ class Config:
 
     def get_top_k(self) -> int:
         return self.top_k
-
-
-
-
-
