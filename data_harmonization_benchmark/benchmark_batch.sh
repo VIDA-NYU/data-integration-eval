@@ -1,8 +1,9 @@
 #!/bin/bash
 
-usecases="cao clark dou huang krug satpathy vasaikar wang"
-matchers="coma similarity_flooding cupid distribution_based jaccard_distance two_phase"
-# matchers="jaccard_distance"
+# usecases="cao clark dou huang krug satpathy vasaikar wang"
+usecases="amazon_google_exp beeradvo_ratebeer fodors_zagats"
+# matchers="coma similarity_flooding cupid distribution_based jaccard_distance two_phase"
+matchers="two_phase coma"
 n_runs=3
 
 rm -rf tmp/logs/*

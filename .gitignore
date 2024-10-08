@@ -199,3 +199,10 @@ cython_debug/
 **/.DS_Store
 tmp/
 **/tmp/
+
+checkpoint/
+**/checkpoint/
+
+*.ext3
+*.pt
+

@@ -13,11 +13,13 @@ logger = logging.getLogger(__name__)
 class Config:
     def __init__(
         self,
+        usecase: str,
         source: Union[str, pd.DataFrame],
         target: Union[str, pd.DataFrame],
         ground_truth: Union[str, pd.DataFrame],  # "source" | "target"
         scorer: str = "accuracy",
         n_jobs: int = 1,
+        top_k: int = 10,
     ):
         if isinstance(source, str):
             self.source = pd.read_csv(source)
@@ -37,6 +39,9 @@ class Config:
             self.ground_truth = ground_truth
 
         self.n_jobs = n_jobs
+        self.usecase_name = usecase.split("/")[-1]
+        self.usecase_path = usecase
+        self.top_k = top_k
 
     def get_source(self) -> pd.DataFrame:
         return self.source
@@ -55,5 +60,26 @@ class Config:
 
         return accuracy
 
+    def get_ground_truth_set(self) -> set:
+        gt_set = set()
+        for row in self.ground_truth.itertuples():
+            gt_set.add((row.source, row.target))
+
+        return gt_set
+
     def get_n_jobs(self) -> int:
         return self.n_jobs
+
+    def get_usecase_name(self) -> str:
+        return self.usecase_name
+
+    def get_usecase_path(self) -> str:
+        return self.usecase_path
+
+    def get_top_k(self) -> int:
+        return self.top_k
+
+
+
+
+

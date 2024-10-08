@@ -1,0 +1,9 @@
+torch
+torchvision
+torchaudio
+transformers
+matplotlib
+tensorboard
+unidecode
+scikit-learn
+chardet

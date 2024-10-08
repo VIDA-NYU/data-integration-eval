@@ -6,7 +6,7 @@ import pandas as pd
 
 from config import Config
 from matching import matching
-from utils.result_proc import save_result_csv
+from utils.result_proc import parse_results
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,8 @@ def main():
     parser.add_argument(
         "-o", "--output", type=str, help="Output file path", default="results.csv"
     )
-    parser.add_argument("-n", "--njobs", type=int, help="Number of jobruns", default=1)
+    parser.add_argument("-n", "--n-jobs", type=int, help="Number of jobruns", default=1)
+    parser.add_argument("-k", "--top-k", type=int, help="Top k results for matching candidates", default=10)
 
     args = parser.parse_args()
 
@@ -36,7 +37,8 @@ def main():
     logger.info("Target file: %s", args.target)
     logger.info("Ground truth file: %s", args.ground_truth)
     logger.info("Output file: %s", args.output)
-    logger.info("Number of runs: %d", args.njobs)
+    logger.info("Number of runs: %d", args.n_jobs)
+    logger.info("Top k candidates: %d", args.top_k)
 
     target = args.target
     if args.usecase:
@@ -49,23 +51,17 @@ def main():
         ground_truth = args.ground_truth
 
     config = Config(
-        source=source, target=target, ground_truth=ground_truth, n_jobs=args.njobs
+        usecase=args.usecase,
+        source=source,
+        target=target,
+        ground_truth=ground_truth,
+        n_jobs=args.n_jobs,
+        top_k=args.top_k
     )
 
-    score, runtime = matching(config, args.matcher)
+    all_metrics, runtime = matching(config, args.matcher)
 
-    result_df = pd.DataFrame(
-        {
-            "source": [source],
-            "target": [target],
-            "matcher": [args.matcher],
-            "score": [score],
-            "runtime": [runtime],
-        }
-    )
-
-    save_result_csv(result_df, args.output, append=True)
-
+    parse_results(source, target, args.matcher, runtime, all_metrics, args.output)
 
 if __name__ == "__main__":
     main()
