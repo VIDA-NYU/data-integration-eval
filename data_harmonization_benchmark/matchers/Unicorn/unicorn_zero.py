@@ -54,7 +54,8 @@ class TrainApp:
         num_tasks=2,
         resample=0,
         modelname="UnicornZero",
-        ckpt="",
+        ckpt_path="checkpoint",
+        ckpt="UnicornPlus",
         num_data=1000,
         num_k=2,
         scale=20,
@@ -85,6 +86,7 @@ class TrainApp:
         self.num_tasks = num_tasks
         self.resample = resample
         self.modelname = modelname
+        self.ckpt_path = ckpt_path
         self.ckpt = ckpt
         self.num_data = num_data
         self.num_k = num_k
@@ -120,6 +122,7 @@ class TrainApp:
                 num_tasks=self.num_tasks,
                 resample=self.resample,
                 modelname=self.modelname,
+                ckpt_path=self.ckpt_path,
                 ckpt=self.ckpt,
                 num_data=self.num_data,
                 num_k=self.num_k,
@@ -193,20 +196,36 @@ class TrainApp:
         if self.wmoe:
             exp = self.expertsnum
             moelayer = MoEModule(
-                self.size_output, self.units, exp, load_balance=self.load_balance, use_cuda=self.use_gpu
+                self.size_output,
+                self.units,
+                exp,
+                load_balance=self.load_balance,
+                use_cuda=self.use_gpu,
             )
 
         if self.load:
-            encoder = init_model(encoder, restore=self.ckpt + "_" + param.encoder_path, use_gpu=self.use_gpu)
+            encoder = init_model(
+                encoder,
+                restore=os.path.join(
+                    self.ckpt_path, self.ckpt + "_" + param.encoder_path
+                ),
+                use_gpu=self.use_gpu,
+            )
             classifiers = init_model(
-                classifiers, restore=self.ckpt + "_" + param.cls_path, use_gpu=self.use_gpu
+                classifiers,
+                restore=os.path.join(self.ckpt_path, self.ckpt + "_" + param.cls_path),
+                use_gpu=self.use_gpu,
             )
             if self.wmoe:
                 moelayer = init_model(
-                    moelayer, restore=self.ckpt + "_" + param.moe_path, use_gpu=self.use_gpu
+                    moelayer,
+                    restore=os.path.join(
+                        self.ckpt_path, self.ckpt + "_" + param.moe_path
+                    ),
+                    use_gpu=self.use_gpu,
                 )
         else:
-            encoder = init_model(encoder)
+            encoder = init_model(encoder, use_gpu=self.use_gpu)
             classifiers = init_model(classifiers, use_gpu=self.use_gpu)
             if self.wmoe:
                 moelayer = init_model(moelayer, use_gpu=self.use_gpu)
@@ -226,8 +245,8 @@ class TrainApp:
             #         train_metrics.append(p[2])
             for key, p in dataformat.new_schema_matching_data.items():
                 if p[0] == "train":
-                    train_sets.append(get_data(p[1]+"train.json", num=limit))
-                    valid_sets.append(get_data(p[1]+"valid.json", num=limit))
+                    train_sets.append(get_data(p[1] + "train.json", num=limit))
+                    valid_sets.append(get_data(p[1] + "valid.json", num=limit))
                     train_metrics.append(p[2])
 
             train_data_loaders = []
@@ -330,7 +349,7 @@ class TrainApp:
 
         test_sets = []
         test_metrics = []
-        
+
         if self.usecase_path:
             test = self.parse_data_dir_gdc(self.usecase_path, is_test=True)
             test_sets.append(test)
@@ -341,9 +360,9 @@ class TrainApp:
                     test = self.parse_data_dir_gdc(p[1], is_test=True)
                     test_sets.append(test)
                     test_metrics.append(p[2])
-            for key,p in dataformat.new_schema_matching_data.items():
+            for key, p in dataformat.new_schema_matching_data.items():
                 if p[0] == "test":
-                    test_sets.append(get_data(p[1]+"test.json"))
+                    test_sets.append(get_data(p[1] + "test.json"))
                     test_metrics.append(p[2])
 
         test_data_loaders = []
@@ -404,7 +423,7 @@ class TrainApp:
                 ground_truth,
                 args=self.get_args(),
             )
-            print("Matches:", matches)
+            return matches
         else:
             f1s = []
             recalls = []
@@ -434,7 +453,6 @@ class TrainApp:
             print("F1: ", f1s)
             print("Recall: ", recalls)
             print("ACC.", accs)
-
 
     def parse_dataset(self, data_dir):
         data_name = data_dir
@@ -470,12 +488,12 @@ class TrainApp:
 
             matching_targets = [target.strip() for target in row.target.split(";")]
             if True:
-            #     for target_colname in matching_targets:
-            #         target_values = target[target_colname].unique()[:20]
-            #         target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
-            #         dataset_json.append([source_str, target_str, 1])
+                #     for target_colname in matching_targets:
+                #         target_values = target[target_colname].unique()[:20]
+                #         target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
+                #         dataset_json.append([source_str, target_str, 1])
 
-            # else:
+                # else:
                 for target_colname in target.columns:
                     is_matching = 0
                     if target_colname in matching_targets:

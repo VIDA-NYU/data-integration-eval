@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 
+
 class EntropyLoss(nn.Module):
     def __init__(self):
         super(EntropyLoss, self).__init__()

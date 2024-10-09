@@ -17,8 +17,10 @@ def matching(
         pretrain=False,
         load=True,
         model="deberta_base",
-        modelname="UnicornPlus",
-        use_gpu=True,
+        modelname="Temp",
+        ckpt_path="matchers/Unicorn/checkpoint",
+        ckpt="UnicornPlus",
+        use_gpu=False,
         valentine_output=True,
     ),
 ):

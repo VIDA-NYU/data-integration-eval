@@ -6,7 +6,9 @@ from unicorn.dataprocess import dataformat
 from unicorn.utils.utils import make_cuda
 
 
-def predict_moe(encoder, moelayer, classifier, data_loader, source, target, ground_truth, args=None):
+def predict_moe(
+    encoder, moelayer, classifier, data_loader, source, target, ground_truth, args=None
+):
     encoder.eval()
     moelayer.eval()
     classifier.eval()
@@ -35,14 +37,11 @@ def predict_moe(encoder, moelayer, classifier, data_loader, source, target, grou
                 moeoutput, gateweights = moelayer(feat)
                 averagegateweight += gateweights
             preds = classifier(moeoutput)
-            
 
-            
             pred_cls = preds.data.cpu().numpy()
             match_scores.extend([scores[1] for scores in pred_cls])
             print("labels:", labels)
-            
-            
+
     for idx, row in enumerate(ground_truth.itertuples()):
         source_colname = row.source
 
@@ -125,7 +124,7 @@ def evaluate_moe(
 
         loss += criterion(preds, labels).item()
         pred_cls = preds.data.max(1)[1]
-        print("AAAAAAAAA -----",preds.data.max(1))
+        print("AAAAAAAAA -----", preds.data.max(1))
         print(pred_cls.cpu().numpy())
 
         acc += pred_cls.eq(labels.data).cpu().sum().item()

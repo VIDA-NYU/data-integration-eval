@@ -2,15 +2,15 @@ import csv
 import json
 import os
 import random
+
+import matplotlib.pyplot as plt
 import pandas as pd
 import torch
+import torch.backends.cudnn as cudnn
 from unicorn.utils import param
 
 # -*- coding: utf-8 -*-
 # coding: unicode_escape
-
-import matplotlib.pyplot as plt
-import torch.backends.cudnn as cudnn
 
 
 class AttrDict(dict):
@@ -121,10 +121,12 @@ def init_random_seed(manual_seed):
 def init_model(net, restore=None, use_gpu=True):
     # restore model weights
     if restore is not None:
-        path = os.path.join(param.model_root, restore)
-        print("Path!!!! ", path)
+        path = restore
         if os.path.exists(path):
-            net.load_state_dict(torch.load(path))
+            if not use_gpu:
+                net.load_state_dict(torch.load(path, map_location=torch.device("cpu")))
+            else:
+                net.load_state_dict(torch.load(path))
             print("Restore model from: {}".format(os.path.abspath(path)))
 
     # check if cuda is available

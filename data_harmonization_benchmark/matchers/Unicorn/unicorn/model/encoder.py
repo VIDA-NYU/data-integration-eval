@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from transformers import BertModel, DistilBertModel, RobertaModel, AutoModel, DebertaModel, XLNetModel
+from transformers import (AutoModel, BertModel, DebertaModel, DistilBertModel,
+                          RobertaModel, XLNetModel)
 from unicorn.utils import param
 
 
