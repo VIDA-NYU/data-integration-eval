@@ -17,7 +17,9 @@ def matching(
         pretrain=False,
         load=True,
         model="deberta_base",
-        modelname="UnicornZero",
+        modelname="UnicornPlus",
+        use_gpu=True,
+        valentine_output=True,
     ),
 ):
     data_dir = usecase_path
@@ -28,8 +30,7 @@ def matching(
 
     unicorn = TrainApp(usecase_path=usecase_path, **config)
 
-    unicorn.main()
-    matches = unicorn.get_matches(top_k=top_k)
+    matches = unicorn.main()
 
     logger.critical(f"[MATCHES] {matches}")
 

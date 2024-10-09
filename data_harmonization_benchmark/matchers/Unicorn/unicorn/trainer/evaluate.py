@@ -11,6 +11,12 @@ def predict_moe(encoder, moelayer, classifier, data_loader, source, target, grou
     moelayer.eval()
     classifier.eval()
 
+    if args.use_gpu:
+        averagegateweight = torch.Tensor([0 for _ in range(args.expertsnum)]).cuda()
+    else:
+        averagegateweight = torch.Tensor([0 for _ in range(args.expertsnum)])
+    match_scores = []
+    matches = {}
     for reviews, mask, segment, labels, exm_id, task_id in data_loader:
         if args.use_gpu:
             reviews = make_cuda(reviews)
@@ -32,21 +38,22 @@ def predict_moe(encoder, moelayer, classifier, data_loader, source, target, grou
             
 
             
-            pred_cls = preds.data.numpy()
-            match_scores = [scores[1] for scores in pred_cls]
+            pred_cls = preds.data.cpu().numpy()
+            match_scores.extend([scores[1] for scores in pred_cls])
+            print("labels:", labels)
             
-            matches = {}
-            for idx, row in enumerate(ground_truth.itertuples()):
-                source_colname = row.source
+            
+    for idx, row in enumerate(ground_truth.itertuples()):
+        source_colname = row.source
 
-                for target_colname in target.columns:
-                    matches[
-                        (
-                            ("source", source_colname),
-                            ("target", target_colname),
-                        )
-                    ] = match_scores[idx]
-            return matches
+        for target_colname in target.columns:
+            matches[
+                (
+                    ("source", source_colname),
+                    ("target", target_colname),
+                )
+            ] = match_scores.pop(0)
+    return matches
 
 
 def evaluate_moe(
@@ -118,6 +125,7 @@ def evaluate_moe(
 
         loss += criterion(preds, labels).item()
         pred_cls = preds.data.max(1)[1]
+        print("AAAAAAAAA -----",preds.data.max(1))
         print(pred_cls.cpu().numpy())
 
         acc += pred_cls.eq(labels.data).cpu().sum().item()

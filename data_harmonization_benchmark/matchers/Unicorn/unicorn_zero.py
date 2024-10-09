@@ -59,9 +59,9 @@ class TrainApp:
         num_k=2,
         scale=20,
         wmoe=1,
-        expertsnum=15,
         size_output=768,
-        units=1024,
+        units=768,
+        expertsnum=6,
         shuffle=0,
         load_balance=0,
         usecase_path=None,
@@ -217,38 +217,18 @@ class TrainApp:
             test_sets = []
             valid_sets = []
             limit = 40000
-            # for key, p in dataformat.entity_alignment_data.items():
+            # for key, p in dataformat.schema_matching_data.items():
             #     if p[0] == "train":
-            #         train_sets.append(get_data(p[1]+"train-large.json", num=limit))
-            #         valid_sets.append(get_data(p[1]+"valid-large.json", num=limit))
+            #         print(p[1])
+            #         train, valid = self.parse_data_dir_gdc(p[1])
+            #         train_sets.append(train)
+            #         valid_sets.append(valid)
             #         train_metrics.append(p[2])
-            # for key, p in dataformat.string_matching_data.items():
-            #     if p[0] == "train":
-            #         train_sets.append(get_data(p[1]+"train-large.json", num=limit))
-            #         valid_sets.append(get_data(p[1]+"valid-large.json", num=limit))
-            #         train_metrics.append(p[2])
-            # for key, p in dataformat.new_deepmatcher_data.items():
-            #     if p[0] == "train":
-            #         train_sets.append(get_data(p[1]+"train.json", num=limit))
-            #         valid_sets.append(get_data(p[1]+"valid.json", num=limit))
-            #         train_metrics.append(p[2])
-            for key, p in dataformat.schema_matching_data.items():
+            for key, p in dataformat.new_schema_matching_data.items():
                 if p[0] == "train":
-                    print(p[1])
-                    train, valid = self.parse_data_dir_gdc(p[1])
-                    train_sets.append(train)
-                    valid_sets.append(valid)
+                    train_sets.append(get_data(p[1]+"train.json", num=limit))
+                    valid_sets.append(get_data(p[1]+"valid.json", num=limit))
                     train_metrics.append(p[2])
-            # for key, p in dataformat.column_type_data.items():
-            #     if p[0] == "train":
-            #         train_sets.append(get_data(p[1]+"train.json", num=limit))
-            #         valid_sets.append(get_data(p[1]+"valid.json", num=limit))
-            #         train_metrics.append(p[2])
-            # for key, p in dataformat.entity_linking_data.items():
-            #     if p[0] == "train":
-            #         train_sets.append(get_data(p[1]+"train.json", num=limit))
-            #         valid_sets.append(get_data(p[1]+"valid.json", num=limit))
-            #         train_metrics.append(p[2])
 
             train_data_loaders = []
             valid_data_loaders = []
@@ -361,30 +341,10 @@ class TrainApp:
                     test = self.parse_data_dir_gdc(p[1], is_test=True)
                     test_sets.append(test)
                     test_metrics.append(p[2])
-        # for key,p in dataformat.entity_alignment_data.items():
-        #     if p[0] == "test":
-        #         test_sets.append(get_data(p[1]+"test.json"))
-        #         test_metrics.append(p[2])
-        # for key,p in dataformat.string_matching_data.items():
-        #     if p[0] == "test":
-        #         test_sets.append(get_data(p[1]+"test.json"))
-        #         test_metrics.append(p[2])
-        # for key,p in dataformat.new_deepmatcher_data.items():
-        #     if p[0] == "test":
-        #         test_sets.append(get_data(p[1]+"test.json"))
-        #         test_metrics.append(p[2])
-        # for key,p in dataformat.new_schema_matching_data.items():
-        #     if p[0] == "test":
-        #         test_sets.append(get_data(p[1]+"test.json"))
-        #         test_metrics.append(p[2])
-        # for key,p in dataformat.column_type_data.items():
-        #     if p[0] == "test":
-        #         test_sets.append(get_data(p[1]+"test.json"))
-        #         test_metrics.append(p[2])
-        # for key,p in dataformat.entity_linking_data.items():
-        #     if p[0] == "test":
-        #         test_sets.append(get_data(p[1]+"test.json"))
-        #         test_metrics.append(p[2])
+            for key,p in dataformat.new_schema_matching_data.items():
+                if p[0] == "test":
+                    test_sets.append(get_data(p[1]+"test.json"))
+                    test_metrics.append(p[2])
 
         test_data_loaders = []
         if self.model in [
@@ -509,18 +469,18 @@ class TrainApp:
             source_str = f"[ATT] {source_colname} [VAL] {' [VAL] '.join(str(x) for x in list(source_values))}"
 
             matching_targets = [target.strip() for target in row.target.split(";")]
-            # if True:
+            if True:
             #     for target_colname in matching_targets:
             #         target_values = target[target_colname].unique()[:20]
             #         target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
             #         dataset_json.append([source_str, target_str, 1])
 
             # else:
-            for target_colname in target.columns:
-                is_matching = 0
-                if target_colname in matching_targets:
-                    is_matching = 1
-                target_values = target[target_colname].unique()[:20]
-                target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
-                dataset_json.append([source_str, target_str, is_matching])
+                for target_colname in target.columns:
+                    is_matching = 0
+                    if target_colname in matching_targets:
+                        is_matching = 1
+                    target_values = target[target_colname].unique()[:20]
+                    target_str = f"[ATT] {target_colname} [VAL] {' [VAL] '.join(str(x) for x in list(target_values))}"
+                    dataset_json.append([source_str, target_str, is_matching])
         return dataset_json

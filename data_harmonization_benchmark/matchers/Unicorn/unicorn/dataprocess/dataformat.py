@@ -2,14 +2,19 @@
 schema_matching_data = {
     "amazon_google_exp": ["train", "../../datasets/amazon_google_exp/", "recall"],
     "beeradvo_ratebeer": ["train", "../../datasets/beeradvo_ratebeer/", "recall"],
-    "cao": ["train", "../../datasets/cao/", "recall"],
-    "clark": ["train", "../../datasets/clark/", "recall"],
-    "dou": ["train", "../../datasets/dou/", "recall"],
-    "huang": ["train", "../../datasets/huang/", "recall"],
-    "krug": ["train", "../../datasets/krug/", "recall"],
-    "satpathy": ["test", "../../datasets/satpathy/", "recall"],
-    "vasaikar": ["test", "../../datasets/vasaikar/", "recall"],
-    "wang": ["test", "../../datasets/wang/", "recall"],
+    "dblp_acm": ["train", "../../datasets/dblp_acm/", "recall"],
+    "dblp_scholar": ["train", "../../datasets/dblp_scholar/", "recall"],
+    "fodors_zagats": ["train", "../../datasets/fodors_zagats/", "recall"],
+    "itunes_amazon": ["train", "../../datasets/itunes_amazon/", "recall"],
+    "walmart_amazon": ["train", "../../datasets/walmart_amazon/", "recall"],
+    # "cao": ["train", "../../datasets/cao/", "recall"],
+    # "clark": ["train", "../../datasets/clark/", "recall"],
+    # "dou": ["train", "../../datasets/dou/", "recall"],
+    # "huang": ["train", "../../datasets/huang/", "recall"],
+    # "krug": ["train", "../../datasets/krug/", "recall"],
+    # "satpathy": ["test", "../../datasets/satpathy/", "recall"],
+    # "vasaikar": ["test", "../../datasets/vasaikar/", "recall"],
+    # "wang": ["test", "../../datasets/wang/", "recall"],
 }
 
 
