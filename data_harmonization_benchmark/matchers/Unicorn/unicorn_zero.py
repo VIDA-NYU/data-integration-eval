@@ -193,23 +193,23 @@ class TrainApp:
         if self.wmoe:
             exp = self.expertsnum
             moelayer = MoEModule(
-                self.size_output, self.units, exp, load_balance=self.load_balance
+                self.size_output, self.units, exp, load_balance=self.load_balance, use_cuda=self.use_gpu
             )
 
         if self.load:
-            encoder = init_model(encoder, restore=self.ckpt + "_" + param.encoder_path)
+            encoder = init_model(encoder, restore=self.ckpt + "_" + param.encoder_path, use_gpu=self.use_gpu)
             classifiers = init_model(
-                classifiers, restore=self.ckpt + "_" + param.cls_path
+                classifiers, restore=self.ckpt + "_" + param.cls_path, use_gpu=self.use_gpu
             )
             if self.wmoe:
                 moelayer = init_model(
-                    moelayer, restore=self.ckpt + "_" + param.moe_path
+                    moelayer, restore=self.ckpt + "_" + param.moe_path, use_gpu=self.use_gpu
                 )
         else:
             encoder = init_model(encoder)
-            classifiers = init_model(classifiers)
+            classifiers = init_model(classifiers, use_gpu=self.use_gpu)
             if self.wmoe:
-                moelayer = init_model(moelayer)
+                moelayer = init_model(moelayer, use_gpu=self.use_gpu)
 
         train_metrics = []
         if self.pretrain and (not self.shuffle):

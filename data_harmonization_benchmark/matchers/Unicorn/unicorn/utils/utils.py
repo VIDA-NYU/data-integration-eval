@@ -118,7 +118,7 @@ def init_random_seed(manual_seed):
         torch.cuda.manual_seed_all(seed)
 
 
-def init_model(net, restore=None):
+def init_model(net, restore=None, use_gpu=True):
     # restore model weights
     if restore is not None:
         path = os.path.join(param.model_root, restore)
@@ -128,7 +128,7 @@ def init_model(net, restore=None):
             print("Restore model from: {}".format(os.path.abspath(path)))
 
     # check if cuda is available
-    if torch.cuda.is_available():
+    if use_gpu and torch.cuda.is_available():
         cudnn.benchmark = True
         net.cuda()
     return net
