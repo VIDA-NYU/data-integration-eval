@@ -58,13 +58,15 @@ class GoldenStandardLoader:
 
         golden_std = pd.read_csv(path)
         for row in golden_std.itertuples():
-            if (
-                row.source not in src_removed_empty_cols_ls
-                and row.target not in tgt_removed_empty_cols_ls
-            ):
-                self.expected_matches.add(
-                    frozenset((("source", row.source), ("target", row.target)))
-                )
+            targets = [target.strip() for target in row.target.split(";")]
+            for target in targets:
+                if (
+                    row.source not in src_removed_empty_cols_ls
+                    and target not in tgt_removed_empty_cols_ls
+                ):
+                    self.expected_matches.add(
+                        frozenset((("source", row.source), ("target", target)))
+                    )
         self.size = len(self.expected_matches)
 
     def is_in_golden_standard(self, mapping: set):

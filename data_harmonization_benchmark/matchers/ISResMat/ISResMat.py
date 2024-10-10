@@ -251,10 +251,12 @@ class TrainApp:
         #
         # for param in self.running_params:
         #     self.logger.info(param)
-        
+
         self.model = self.init_model()
         if os.path.exists(self.model_checkpoint):
-            self.model.load_state_dict(torch.load(self.model_checkpoint, weights_only=True))
+            self.model.load_state_dict(
+                torch.load(self.model_checkpoint, weights_only=True)
+            )
         self.optimizer = self.init_optimizer()
 
         self.metric_fns = self.init_metrics()
