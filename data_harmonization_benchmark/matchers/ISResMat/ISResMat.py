@@ -63,6 +63,7 @@ class TrainApp:
         numerical_cols_window_size=10,  # the size of the distribution-aware fingerprint strings.
         data_dir="data",  # Location for storing data and outputs, default is project_loc/data.
         out_dir="output",  # Location for storing outputs, default is in project_loc/data/output.
+        model_checkpoint="checkpoint/checkpoint.pt",
     ):
         self.algo_begin_time = time.time()
 
@@ -116,6 +117,7 @@ class TrainApp:
         self.prop_sub_rows = prop_sub_rows
         self.out_dir = out_dir
         self.store_matches = store_matches
+        self.model_checkpoint = model_checkpoint
 
         if self.process_mode in [0]:
             assert self.n_trn_cols > 0, "specific --n-trn-cols > 0 needed"
@@ -249,8 +251,10 @@ class TrainApp:
         #
         # for param in self.running_params:
         #     self.logger.info(param)
-
+        
         self.model = self.init_model()
+        if os.path.exists(self.model_checkpoint):
+            self.model.load_state_dict(torch.load(self.model_checkpoint, weights_only=True))
         self.optimizer = self.init_optimizer()
 
         self.metric_fns = self.init_metrics()
@@ -288,23 +292,6 @@ class TrainApp:
         self.tgt_center_sh_ls = None
 
         self.algo_comp_begin_time = time.time()
-
-    def update_usecase(self, dataset_name, orig_file_golden_matches):
-        self.golden_matches_file = orig_file_golden_matches
-        self.dataset_name = dataset_name
-
-        (
-            (self.src_table_name, self.src_df),
-            (self.tgt_table_name, self.tgt_df),
-            self.golden_matches,
-            self.numerical_golden_matches_set,
-        ) = TableMultiColRandomIntersectStreamDataset.read_and_process_table(
-            self.orig_file_src,
-            self.orig_file_tgt,
-            self.golden_matches_file,
-            self.dropna,
-            self.col_name_prob,
-        )
 
     def align_fragment_size_setting(self):
         src_n_cols = self.src_df.shape[1]

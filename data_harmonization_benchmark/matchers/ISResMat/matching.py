@@ -19,6 +19,7 @@ def matching(
         frag_height=6,
         frag_width=12,
         learning_rate=3e-5,
+        model_checkpoint="matchers/Unicorn/checkpoint/checkpoint.pt",
     ),
 ):
     data_dir = usecase_path
@@ -36,11 +37,11 @@ def matching(
         orig_file_tgt=tgt_orig_file,
         orig_file_golden_matches=golden_mappings,
         process_mode=1,
-        n_val_cols=1,
+        n_val_cols=10,
         **config,
     )
 
-    isresmat.do_trn(1)
+    # isresmat.do_trn(1)
     isresmat.eval_to_match()
     matches = isresmat.get_matches(top_k=top_k)
 

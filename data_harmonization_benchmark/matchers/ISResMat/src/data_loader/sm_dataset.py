@@ -929,9 +929,6 @@ class SoloColsDataset(torch.utils.data.Dataset):
         # not necessary
         random.shuffle(self.cols_ls)
 
-        print(self.cols_ls)
-        print(self.rows_ls)
-
     def __len__(self):
         return len(self.cols_ls)
 
