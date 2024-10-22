@@ -15,12 +15,12 @@ def matching(
     top_k: int = 10,
     config: Optional[Dict[str, Any]] = dict(
         pretrain=False,
-        load=True,
+        load=True, # Set this to True for pre-trained model, False for zero-shot !!!
         model="deberta_base",
         modelname="Temp",
         ckpt_path="matchers/Unicorn/checkpoint",
         ckpt="UnicornPlus",
-        use_gpu=False,
+        use_gpu=True,
         valentine_output=True,
     ),
 ):
@@ -34,6 +34,6 @@ def matching(
 
     matches = unicorn.main()
 
-    logger.critical(f"[MATCHES] {matches}")
+    # logger.critical(f"[MATCHES] {matches}")
 
     return matches

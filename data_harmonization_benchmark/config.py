@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Union
+from typing import Union, Optional
 
 import pandas as pd
 
@@ -14,43 +14,54 @@ class Config:
     def __init__(
         self,
         usecase: str,
-        source: Union[str, pd.DataFrame],
-        target: Union[str, pd.DataFrame],
-        ground_truth: Union[str, pd.DataFrame],  # "source" | "target"
+        subtasks: list[str],
+        sources: list[Union[str, pd.DataFrame]],
+        targets: list[Union[str, pd.DataFrame]],
+        ground_truths: list[Union[str, pd.DataFrame]],  # "source" | "target"
         scorer: str = "accuracy",
         n_jobs: int = 1,
         top_k: int = 10,
     ):
-        if isinstance(source, str):
-            self.source = pd.read_csv(source)
-        else:
-            self.source = source
+        self.subtasks = subtasks
+        self.sources = iter(sources)
 
-        if target in ["gdc"]:
-            self.target = pd.read_csv(GDC_DATA_PATH)
-        elif isinstance(target, str):
-            self.target = pd.read_csv(target)
+        if targets[0] in ["gdc"]:
+            self.targets = pd.read_csv(GDC_DATA_PATH)
         else:
-            self.target = target
+            self.targets = iter(targets)
 
-        if isinstance(ground_truth, str):
-            self.ground_truth = pd.read_csv(ground_truth)
-        else:
-            self.ground_truth = ground_truth
+        self.ground_truths = iter(ground_truths)
 
         self.n_jobs = n_jobs
         self.usecase_name = usecase.split("/")[-1]
         self.usecase_path = usecase
         self.top_k = top_k
 
-    def get_source(self) -> pd.DataFrame:
-        return self.source
+    def get_source(self) -> Optional[pd.DataFrame]:
+        source = next(self.sources)
+        if isinstance(source, pd.DataFrame):
+            return source
+        if os.path.exists(source):
+            return pd.read_csv(source)
+        return None
 
-    def get_target(self) -> pd.DataFrame:
-        return self.target
+    def get_target(self) -> Optional[pd.DataFrame]:
+        if isinstance(self.targets, pd.DataFrame):
+            return self.targets
+        target = next(self.targets)
+        if isinstance(target, pd.DataFrame):
+            return target
+        if os.path.exists(target):
+            return pd.read_csv(target)
+        return None
 
-    def get_ground_truth(self) -> pd.DataFrame:
-        return self.ground_truth
+    def get_ground_truth(self) -> Optional[pd.DataFrame]:
+        ground_truth = next(self.ground_truths)
+        if isinstance(ground_truth, pd.DataFrame):
+            return ground_truth
+        if os.path.exists(ground_truth):
+            return pd.read_csv(ground_truth)
+        return None
 
     def get_scorer(self) -> callable:
         def accuracy(ground_truth: list[str], matches: list[str]) -> float:
@@ -61,8 +72,12 @@ class Config:
         return accuracy
 
     def get_ground_truth_set(self) -> set:
+        ground_truth = self.get_ground_truth()
+        if ground_truth is None:
+            logger.error("[Config] get_ground_truth_set ground_truth is invalid!")
+            return set()
         gt_set = set()
-        for row in self.ground_truth.itertuples():
+        for row in ground_truth.itertuples():
             gt_set.add((row.source, row.target))
 
         return gt_set
@@ -78,3 +93,6 @@ class Config:
 
     def get_top_k(self) -> int:
         return self.top_k
+
+    def get_subtasks(self) -> list[str]:
+        return self.subtasks

@@ -5,7 +5,6 @@ __pycache__/
 
 # Data folder
 data/
-models/
 checkpoints/
 mlruns/
 model/

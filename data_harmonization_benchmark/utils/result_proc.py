@@ -20,11 +20,12 @@ def save_result_csv(df: pd.DataFrame, path: str, append: bool = False) -> None:
     logger.info("[utils]Results appended to %s", path)
 
 
-def parse_results(source, target, matcher, runtime, all_metrics, output):
+def parse_results(usecase, taskname, matcher, top_k, runtime, all_metrics, output):
     results = {
-        "source": [source],
-        "target": [target],
+        "usecase": [usecase],
+        "taskname": [taskname],
         "matcher": [matcher],
+        "top_k": [top_k],
         "runtime": [runtime],
     }
 

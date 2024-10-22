@@ -124,8 +124,6 @@ def evaluate_moe(
 
         loss += criterion(preds, labels).item()
         pred_cls = preds.data.max(1)[1]
-        print("AAAAAAAAA -----", preds.data.max(1))
-        print(pred_cls.cpu().numpy())
 
         acc += pred_cls.eq(labels.data).cpu().sum().item()
         for i in range(len(labels)):

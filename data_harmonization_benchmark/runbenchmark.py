@@ -46,28 +46,42 @@ def main():
     logger.info("Number of runs: %d", args.n_jobs)
     logger.info("Top k candidates: %d", args.top_k)
 
-    target = args.target
+    sources = []
+    targets = []
+    ground_truths = []
+    subtasks = []
+
+    def init_data(path):
+        if os.path.exists(os.path.join(path, "source.csv")) and os.path.exists(os.path.join(path, "target.csv")) and os.path.exists(os.path.join(path, "groundtruth.csv")):
+            sources.append(os.path.join(path, "source.csv"))
+            targets.append(os.path.join(path, "target.csv"))
+            ground_truths.append(os.path.join(path, "groundtruth.csv"))
+            subtasks.append(path)
+        for root, dirs, _ in os.walk(path):
+            for dir in dirs:
+                abs_path = os.path.join(root, dir)
+                init_data(abs_path)
+    
     if args.usecase:
-        source = os.path.join(args.usecase, "source.csv")
-        ground_truth = os.path.join(args.usecase, "groundtruth.csv")
-        if os.path.exists(os.path.join(args.usecase, "target.csv")):
-            target = os.path.join(args.usecase, "target.csv")
+        init_data(args.usecase)
     else:
-        source = args.source
-        ground_truth = args.ground_truth
+        sources = [args.source]
+        targets = [args.target]
+        ground_truths = [args.ground_truth]
+        subtasks = [args.usecase]
 
     config = Config(
         usecase=args.usecase,
-        source=source,
-        target=target,
-        ground_truth=ground_truth,
+        subtasks=subtasks,
+        sources=sources,
+        targets=targets,
+        ground_truths=ground_truths,
         n_jobs=args.n_jobs,
         top_k=args.top_k,
     )
 
-    all_metrics, runtime = matching(config, args.matcher)
-
-    parse_results(source, target, args.matcher, runtime, all_metrics, args.output)
+    for subtask_name, all_metrics, runtime in matching(config, args.matcher):
+        parse_results(args.usecase, subtask_name, args.matcher, args.top_k, runtime, all_metrics, args.output)
 
 
 if __name__ == "__main__":

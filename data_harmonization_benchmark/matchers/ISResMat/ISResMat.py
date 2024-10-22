@@ -684,9 +684,9 @@ class TrainApp:
             for k, v in sorted(matches.items(), key=lambda item: item[1], reverse=True)
         }
 
-        self.logger.critical(
-            f"curr_sorted_matches----------->{self.curr_sorted_matches}"
-        )
+        # self.logger.critical(
+        #     f"curr_sorted_matches----------->{self.curr_sorted_matches}"
+        # )
         # when in benchmark testing
         if self.golden_matches is not None:
             self.curr_metrics = self.get_metrics(self.curr_sorted_matches)
@@ -699,9 +699,9 @@ class TrainApp:
                 : len(self.golden_matches.expected_matches)
             ]
 
-            self.logger.critical(
-                f"top_ground_truth_matches----------->{top_ground_truth_matches}"
-            )
+            # self.logger.critical(
+            #     f"top_ground_truth_matches----------->{top_ground_truth_matches}"
+            # )
             for match in self.numerical_golden_matches_set:
                 if match in top_ground_truth_matches:
                     self.curr_numerical_matches_set.add(match)
@@ -974,7 +974,7 @@ class TrainApp:
             self.res_dic["matches"] = bm
 
         output_dir = self.get_output_dir()
-        run_id = "-".join([d for d in self.dataset_name.split("/")])
+        run_id = "-".join([name for name in self.dataset_name.split("/") if name not in [".", "..", "", " "]])
         res_file = os.path.join(output_dir, f"{run_id}.json")
         if os.path.dirname(res_file):
             os.makedirs(os.path.dirname(res_file), exist_ok=True)
