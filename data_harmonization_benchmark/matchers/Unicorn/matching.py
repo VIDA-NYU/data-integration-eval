@@ -13,6 +13,7 @@ def matching(
     source: pd.DataFrame,
     target: pd.DataFrame,
     top_k: int = 10,
+    use_gpu: bool = False,
     config: Optional[Dict[str, Any]] = dict(
         pretrain=False,
         load=True, # Set this to True for pre-trained model, False for zero-shot !!!
@@ -20,7 +21,6 @@ def matching(
         modelname="Temp",
         ckpt_path="matchers/Unicorn/checkpoint",
         ckpt="UnicornPlus",
-        use_gpu=True,
         valentine_output=True,
     ),
 ):
@@ -30,7 +30,7 @@ def matching(
     tgt_orig_file = target
     golden_mappings = f"{data_dir}/groundtruth.csv"
 
-    unicorn = TrainApp(usecase_path=usecase_path, **config)
+    unicorn = TrainApp(usecase_path=usecase_path, use_gpu=use_gpu, **config)
 
     matches = unicorn.main()
 

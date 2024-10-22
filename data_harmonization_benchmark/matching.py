@@ -81,6 +81,7 @@ def matching(config: Config, matcher_name: str) -> Tuple[str, Any, int]:
                 source,
                 target,
                 config.get_top_k(),
+                config.get_use_gpu(),
             )
 
             # record end time

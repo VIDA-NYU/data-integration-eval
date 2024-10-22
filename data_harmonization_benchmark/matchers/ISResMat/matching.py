@@ -13,6 +13,7 @@ def matching(
     source: pd.DataFrame,
     target: pd.DataFrame,
     top_k: int = 10,
+    use_gpu: bool = False,
     config: Optional[Dict[str, Any]] = dict(
         n_trn_cols=200,
         batch_size=1,

@@ -21,6 +21,7 @@ class Config:
         scorer: str = "accuracy",
         n_jobs: int = 1,
         top_k: int = 10,
+        use_gpu: bool = False,
     ):
         self.subtasks = subtasks
         self.sources = iter(sources)
@@ -36,6 +37,7 @@ class Config:
         self.usecase_name = usecase.split("/")[-1]
         self.usecase_path = usecase
         self.top_k = top_k
+        self.use_gpu = use_gpu
 
     def get_source(self) -> Optional[pd.DataFrame]:
         source = next(self.sources)
@@ -96,3 +98,6 @@ class Config:
 
     def get_subtasks(self) -> list[str]:
         return self.subtasks
+
+    def get_use_gpu(self) -> bool:
+        return self.use_gpu

@@ -1,10 +1,20 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem 32GB
-#SBATCH --time 12:00:00
+#SBATCH --mem 64GB
+#SBATCH --time 24:00:00
 #SBATCH --mail-user=yfw215@nyu.edu
 #SBATCH --account=pr_136_tandon_advanced
 
+module purge;
+module load anaconda3/2020.07;
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK;
+source /share/apps/anaconda3/2020.07/etc/profile.d/conda.sh;
+conda create -p ./penv_${1} python=3.9;
+conda activate ./penv_${1};
+export PATH=./penv_${1}/bin:$PATH;
 
-singularity exec --overlay /scratch/yfw215/my_env/overlay-50G-10M.ext3:ro /scratch/work/public/singularity/ubuntu-20.04.4.sif /bin/bash -c "source /ext3/env.sh; python3 runbenchmark.py -m ${1} -c datasets/${2} -n ${3} -k ${4}"
+
+pip install -r requirements.txt
+pip install -r matchers/${1}/requirements.txt
+python3 runbenchmark.py -m ${1} -c datasets/${2} -n ${3} -k ${4}

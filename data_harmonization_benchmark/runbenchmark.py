@@ -33,6 +33,7 @@ def main():
         help="Top k results for matching candidates",
         default=10,
     )
+    parser.add_argument('-G', "--use-gpu", action='store_true')
 
     args = parser.parse_args()
 
@@ -45,6 +46,7 @@ def main():
     logger.info("Output file: %s", args.output)
     logger.info("Number of runs: %d", args.n_jobs)
     logger.info("Top k candidates: %d", args.top_k)
+    logger.info("Use GPU: %d", args.use_gpu)
 
     sources = []
     targets = []
@@ -78,6 +80,7 @@ def main():
         ground_truths=ground_truths,
         n_jobs=args.n_jobs,
         top_k=args.top_k,
+        use_gpu=args.use_gpu,
     )
 
     for subtask_name, all_metrics, runtime in matching(config, args.matcher):

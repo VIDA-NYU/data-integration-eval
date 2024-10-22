@@ -18,4 +18,4 @@ conda install cuda -c nvidia;
 
 pip install -r requirements.txt
 pip install -r matchers/${1}/requirements.txt
-python3 runbenchmark.py -m ${1} -c datasets/${2} -n ${3} -k ${4}
+python3 runbenchmark.py -m ${1} -c datasets/${2} -n ${3} -k ${4} --use-gpu
