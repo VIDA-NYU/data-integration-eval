@@ -1,7 +1,7 @@
 import logging
 import os
 import time
-from typing import Union, Optional
+from typing import Optional, Union
 
 import pandas as pd
 

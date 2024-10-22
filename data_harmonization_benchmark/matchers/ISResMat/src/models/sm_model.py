@@ -8,17 +8,20 @@ from transformers import BertModel
 
 
 class AgentsLayer(nn.Module):
-    def __init__(self, n_cols, repr_dim=512, scale_factor=10, cols_repr_init_std=0.005, agents=None, ):
+    def __init__(
+        self,
+        n_cols,
+        repr_dim=512,
+        scale_factor=10,
+        cols_repr_init_std=0.005,
+        agents=None,
+    ):
         super(AgentsLayer, self).__init__()
         self.n_cols = n_cols
         self.repr_dim = repr_dim
         self.scale_factor = scale_factor
         if agents is None:
-            initial_agents = torch.zeros(
-                self.n_cols,
-                self.repr_dim,
-                dtype=torch.float
-            )
+            initial_agents = torch.zeros(self.n_cols, self.repr_dim, dtype=torch.float)
 
             nn.init.normal_(initial_agents, mean=0, std=cols_repr_init_std)
 
@@ -34,7 +37,6 @@ class AgentsLayer(nn.Module):
         self._agents = Parameter(initial_agents)
 
     def forward(self, x):
-
         # no.6
         # x is detached or not will be decided by the input of this function
         simm = torch.matmul(x, self.agents.T)
@@ -50,18 +52,30 @@ class AgentsLayer(nn.Module):
 
 
 class BertFoMatching(nn.Module):
-    def __init__(self, n_cls_src, n_cls_tgt, output_dim, scale_factor, cont_temperature,
-                 sk_n_iter, sk_reg_weight, cols_repr_init_std, model_loc=None):
+    def __init__(
+        self,
+        n_cls_src,
+        n_cls_tgt,
+        output_dim,
+        scale_factor,
+        cont_temperature,
+        sk_n_iter,
+        sk_reg_weight,
+        cols_repr_init_std,
+        model_loc=None,
+    ):
         super(BertFoMatching, self).__init__()
 
         # configuration = BertConfig()
         # self.bert = BertModel(configuration)
         # self.bert = BertModel.from_pretrained(
         #     'bert-base-uncased' if model_loc is None else os.path.join(model_loc, 'bert-base-uncased'))
-        self.bert = BertModel.from_pretrained('bert-base-uncased')
+        self.bert = BertModel.from_pretrained("bert-base-uncased")
         bert_config = self.bert.config
         classifier_dropout = (
-            bert_config.classifier_dropout if bert_config.classifier_dropout is not None else bert_config.hidden_dropout_prob
+            bert_config.classifier_dropout
+            if bert_config.classifier_dropout is not None
+            else bert_config.hidden_dropout_prob
         )
         self.n_cls_src = n_cls_src
         self.n_cls_tgt = n_cls_tgt
@@ -73,22 +87,38 @@ class BertFoMatching(nn.Module):
             nn.Linear(output_dim, output_dim),
         )
 
-        self.src_agents_layer = AgentsLayer(self.n_cls_src, output_dim, scale_factor,
-                                            cols_repr_init_std=cols_repr_init_std)
-        self.tgt_agents_layer = AgentsLayer(self.n_cls_tgt, output_dim, scale_factor,
-                                            cols_repr_init_std=cols_repr_init_std)
+        self.src_agents_layer = AgentsLayer(
+            self.n_cls_src,
+            output_dim,
+            scale_factor,
+            cols_repr_init_std=cols_repr_init_std,
+        )
+        self.tgt_agents_layer = AgentsLayer(
+            self.n_cls_tgt,
+            output_dim,
+            scale_factor,
+            cols_repr_init_std=cols_repr_init_std,
+        )
 
         self.cont_temperature = cont_temperature
         self.sk_n_iter = sk_n_iter
         self.sk_reg_weight = sk_reg_weight
 
         self.CE_loss_func = torch.nn.CrossEntropyLoss()
-        self.KL_loss_func = nn.KLDivLoss(reduction='batchmean')
+        self.KL_loss_func = nn.KLDivLoss(reduction="batchmean")
         self.curr_opt_trans_sim_matrix = None
 
-    def forward(self, cls_token_id, input_ids, attention_mask, token_type_ids, label_ls, data_source,
-                return_logits=False, ):
-        assert data_source == 'src' or data_source == 'tgt'
+    def forward(
+        self,
+        cls_token_id,
+        input_ids,
+        attention_mask,
+        token_type_ids,
+        label_ls,
+        data_source,
+        return_logits=False,
+    ):
+        assert data_source == "src" or data_source == "tgt"
         outputs = self.bert(
             input_ids,
             attention_mask=attention_mask,
@@ -100,8 +130,9 @@ class BertFoMatching(nn.Module):
         # The way embeddings are obtained may seem a bit peculiar, mainly because of
         # early exploration of different fragment construction methods in the project.
         cls_indexes = torch.nonzero(input_ids == cls_token_id)
-        cls_logits = torch.zeros(cls_indexes.shape[0],
-                                      sequence_output.shape[2]).to(input_ids.device)
+        cls_logits = torch.zeros(cls_indexes.shape[0], sequence_output.shape[2]).to(
+            input_ids.device
+        )
         for n in range(cls_indexes.shape[0]):
             i, j = cls_indexes[n]
             logit_n = sequence_output[i, j, :]
@@ -119,20 +150,24 @@ class BertFoMatching(nn.Module):
             assert total_labels_length == len(cls_logits)
 
             match_loss = self.compute_batch_cols_contrastive_loss(cls_logits, label_ls)
-            self_assign_loss = self.self_assign_dist_loss(cls_logits, flatten_label_ls, data_source)
+            self_assign_loss = self.self_assign_dist_loss(
+                cls_logits, flatten_label_ls, data_source
+            )
 
             return match_loss, self_assign_loss
         else:
             return cls_logits
 
     def self_assign_dist_loss(self, cls_logits, flatten_label_ls, data_source=None):
-        if data_source == 'src':
-            self_target_dist = self.self_target_distribution(flatten_label_ls,
-                                                             self.n_cls_src)
+        if data_source == "src":
+            self_target_dist = self.self_target_distribution(
+                flatten_label_ls, self.n_cls_src
+            )
             self_assign_prob = self.src_agents_layer(cls_logits)
-        elif data_source == 'tgt':
-            self_target_dist = self.self_target_distribution(flatten_label_ls,
-                                                             self.n_cls_tgt)
+        elif data_source == "tgt":
+            self_target_dist = self.self_target_distribution(
+                flatten_label_ls, self.n_cls_tgt
+            )
             self_assign_prob = self.tgt_agents_layer(cls_logits)
         dist_loss = self.KL_loss_func(self_assign_prob.log(), self_target_dist)
         return dist_loss
@@ -151,18 +186,24 @@ class BertFoMatching(nn.Module):
 
     def self_target_distribution(self, label_ls, n_cls):
         concatenated = torch.cat(label_ls)
-        self_tgt_dist = torch.nn.functional.one_hot(concatenated, num_classes=n_cls).float()
+        self_tgt_dist = torch.nn.functional.one_hot(
+            concatenated, num_classes=n_cls
+        ).float()
         return self_tgt_dist.float().detach()
 
     def compute_batch_cols_contrastive_loss(self, logits, labels_ls):
         num_inner_batch = len(labels_ls)
         # for every pairwise fragments, the totol columns it contains is the same
         chunked_logits = logits.view(num_inner_batch, -1, logits.shape[1])
-        similarity_matrix = torch.bmm(chunked_logits, torch.transpose(chunked_logits, 1, 2))
+        similarity_matrix = torch.bmm(
+            chunked_logits, torch.transpose(chunked_logits, 1, 2)
+        )
 
         def match_label_builder(sublist):
             conc_label_tensor = torch.cat(sublist)
-            match_labels = (conc_label_tensor.unsqueeze(1) == conc_label_tensor.unsqueeze(0)).float()
+            match_labels = (
+                conc_label_tensor.unsqueeze(1) == conc_label_tensor.unsqueeze(0)
+            ).float()
             return match_labels
 
         match_label_ls = [match_label_builder(sublist) for sublist in labels_ls]
@@ -171,10 +212,12 @@ class BertFoMatching(nn.Module):
         eye_matrix = ~torch.eye(match_labels.shape[1], dtype=bool).to(logits.device)
         mask = torch.stack([eye_matrix] * num_inner_batch, dim=0)
 
-        similarity_matrix = torch.masked_select(similarity_matrix, mask).view(similarity_matrix.shape[0],
-                                                                              similarity_matrix.shape[1], -1)
-        match_labels = torch.masked_select(match_labels, mask).view(match_labels.shape[0],
-                                                                    match_labels.shape[1], -1)
+        similarity_matrix = torch.masked_select(similarity_matrix, mask).view(
+            similarity_matrix.shape[0], similarity_matrix.shape[1], -1
+        )
+        match_labels = torch.masked_select(match_labels, mask).view(
+            match_labels.shape[0], match_labels.shape[1], -1
+        )
 
         similarity_matrix = similarity_matrix.view(-1, similarity_matrix.shape[2])
         match_labels = match_labels.view(-1, match_labels.shape[2])
@@ -220,8 +263,9 @@ class BertFoMatching(nn.Module):
         # # sim_matrix_loss = ((masked_tensor + 1) ** 2).sum() + (-((pesudo_match_tensor + 1) ** 2).sum())
         # sim_matrix_loss = ((masked_tensor + 1) ** 2).sum()
 
-        opt_trans_sim_matrix = self.compute_optimal_transport(sim_matrix.detach(), lam=self.sk_reg_weight,
-                                                              niter=self.sk_n_iter)
+        opt_trans_sim_matrix = self.compute_optimal_transport(
+            sim_matrix.detach(), lam=self.sk_reg_weight, niter=self.sk_n_iter
+        )
 
         self.curr_opt_trans_sim_matrix = opt_trans_sim_matrix
 
@@ -236,9 +280,8 @@ class BertFoMatching(nn.Module):
         r = torch.sum(sM, dim=1)
         c = torch.sum(sM, dim=0)
 
-
         sim_matrix = -sim_matrix
-        P = torch.exp(- lam * sim_matrix)
+        P = torch.exp(-lam * sim_matrix)
         P /= P.sum()
         u = torch.zeros(n, device=sim_matrix.device)
         cnt = 0

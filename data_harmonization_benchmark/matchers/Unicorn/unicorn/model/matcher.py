@@ -16,8 +16,7 @@ class Classifier(nn.Module):
         return out
 
     def init_bert_weights(self, module):
-        """ Initialize the weights.
-        """
+        """Initialize the weights."""
         if isinstance(module, (nn.Linear, nn.Embedding)):
             module.weight.data.normal_(mean=0.0, std=0.02)
         if isinstance(module, nn.Linear) and module.bias is not None:
@@ -37,10 +36,8 @@ class MOEClassifier(nn.Module):
         return out
 
     def init_bert_weights(self, module):
-        """ Initialize the weights.
-        """
+        """Initialize the weights."""
         if isinstance(module, (nn.Linear, nn.Embedding)):
             module.weight.data.normal_(mean=0.0, std=0.02)
         if isinstance(module, nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
-

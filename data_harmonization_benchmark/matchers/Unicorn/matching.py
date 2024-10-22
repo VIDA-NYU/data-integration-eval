@@ -16,7 +16,7 @@ def matching(
     use_gpu: bool = False,
     config: Optional[Dict[str, Any]] = dict(
         pretrain=False,
-        load=True, # Set this to True for pre-trained model, False for zero-shot !!!
+        load=True,  # Set this to True for pre-trained model, False for zero-shot !!!
         model="deberta_base",
         modelname="Temp",
         ckpt_path="matchers/Unicorn/checkpoint",

@@ -46,7 +46,6 @@ def matching(
     isresmat.do_trn(0)
     # isresmat.eval_to_match()
     matches = isresmat.get_matches(top_k=top_k)
-    
 
     # logger.critical(f"[MATCHES] {matches}")
 

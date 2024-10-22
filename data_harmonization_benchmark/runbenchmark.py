@@ -33,7 +33,7 @@ def main():
         help="Top k results for matching candidates",
         default=10,
     )
-    parser.add_argument('-G', "--use-gpu", action='store_true')
+    parser.add_argument("-G", "--use-gpu", action="store_true")
 
     args = parser.parse_args()
 
@@ -54,7 +54,11 @@ def main():
     subtasks = []
 
     def init_data(path):
-        if os.path.exists(os.path.join(path, "source.csv")) and os.path.exists(os.path.join(path, "target.csv")) and os.path.exists(os.path.join(path, "groundtruth.csv")):
+        if (
+            os.path.exists(os.path.join(path, "source.csv"))
+            and os.path.exists(os.path.join(path, "target.csv"))
+            and os.path.exists(os.path.join(path, "groundtruth.csv"))
+        ):
             sources.append(os.path.join(path, "source.csv"))
             targets.append(os.path.join(path, "target.csv"))
             ground_truths.append(os.path.join(path, "groundtruth.csv"))
@@ -63,7 +67,7 @@ def main():
             for dir in dirs:
                 abs_path = os.path.join(root, dir)
                 init_data(abs_path)
-    
+
     if args.usecase:
         init_data(args.usecase)
     else:
@@ -84,7 +88,15 @@ def main():
     )
 
     for subtask_name, all_metrics, runtime in matching(config, args.matcher):
-        parse_results(args.usecase, subtask_name, args.matcher, args.top_k, runtime, all_metrics, args.output)
+        parse_results(
+            args.usecase,
+            subtask_name,
+            args.matcher,
+            args.top_k,
+            runtime,
+            all_metrics,
+            args.output,
+        )
 
 
 if __name__ == "__main__":

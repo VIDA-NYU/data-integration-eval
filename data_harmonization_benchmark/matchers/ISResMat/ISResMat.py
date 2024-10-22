@@ -974,7 +974,13 @@ class TrainApp:
             self.res_dic["matches"] = bm
 
         output_dir = self.get_output_dir()
-        run_id = "-".join([name for name in self.dataset_name.split("/") if name not in [".", "..", "", " "]])
+        run_id = "-".join(
+            [
+                name
+                for name in self.dataset_name.split("/")
+                if name not in [".", "..", "", " "]
+            ]
+        )
         res_file = os.path.join(output_dir, f"{run_id}.json")
         if os.path.dirname(res_file):
             os.makedirs(os.path.dirname(res_file), exist_ok=True)
