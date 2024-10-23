@@ -5,6 +5,12 @@ from pandas.api.types import is_integer_dtype, is_float_dtype, is_datetime64_any
 import numpy as np
 import warnings
 
+lm_map = {
+    "roberta": "roberta-base",
+    "mpnet": "microsoft/mpnet-base",
+    "arctic": "Snowflake/snowflake-arctic-embed-m-v1.5",
+}
+
 
 def get_dataset_paths(dataset):
     dataset_map = {

@@ -8,15 +8,14 @@ from retriever import ColumnRetriever
 from matcher import ColumnMatcher
 from utils import get_dataset_paths, process_tables, get_samples, default_converter
 from evaluation import evaluate_matches, convert_to_valentine_format
-from config import API_KEY
 
 
 class RetrieveMatch:
-    def __init__(self, model_type, dataset, serialization):
+    def __init__(self, model_type, dataset, serialization, llm_model):
         self.retriever = ColumnRetriever(
             model_type=model_type, dataset=dataset, serialization=serialization
         )
-        self.matcher = ColumnMatcher(api_key=API_KEY)
+        self.matcher = ColumnMatcher(llm_model=llm_model)
 
     def match(self, source_tables_path, target_tables_path, source_path, top_k, cand_k):
         source_table = pd.read_csv(os.path.join(source_tables_path, source_path))
@@ -59,9 +58,15 @@ class RetrieveMatch:
 
 def run_retrieve_match(args):
     source_tables_path, target_tables_path, gt_path = get_dataset_paths(args.dataset)
-    rema = RetrieveMatch(args.model_type, args.dataset, args.serialization)
+    rema = RetrieveMatch(
+        args.model_type, args.dataset, args.serialization, args.llm_model
+    )
 
-    params = f"{args.model_type}_{args.serialization}_{args.top_k}_{args.cand_k}"
+    params = (
+        f"{args.model_type}_{args.serialization}_{args.top_k}_{args.cand_k}_{args.llm_model}"
+        if args.cand_k > 1 and args.llm_model != "gpt-4-turbo-preview"
+        else f"{args.model_type}_{args.serialization}_{args.top_k}_{args.cand_k}"
+    )
     target_dir = f"{args.dataset}/{params}"
 
     if not os.path.exists(target_dir):
@@ -179,7 +184,15 @@ def main():
         "--top_k", type=int, default=20, help="Number of top matches to return"
     )
     parser.add_argument(
-        "--cand_k", type=int, default=20, help="Number of candidate matches to refine",
+        "--cand_k",
+        type=int,
+        default=20,
+        help="Number of candidate matches to refine",
+    )
+    parser.add_argument(
+        "--llm_model",
+        default="gpt-4-turbo-preview",
+        help="Type of LLM-based matcher (gpt-4-turbo-preview or gemma2:9b)",
     )
 
     args = parser.parse_args()

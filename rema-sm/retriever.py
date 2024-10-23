@@ -3,13 +3,8 @@ from transformers import AutoTokenizer, AutoModel
 import torch
 from torch.nn.functional import normalize
 
-from utils import infer_column_dtype
+from utils import infer_column_dtype, lm_map
 
-lm_map = {
-    "roberta": "roberta-base",
-    "mpnet": "microsoft/mpnet-base",
-    "arctic": "Snowflake/snowflake-arctic-embed-m-v1.5",
-}
 QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 
 
