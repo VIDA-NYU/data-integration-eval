@@ -9,7 +9,7 @@ QUERY_PREFIX = "Represent this sentence for searching relevant passages: "
 
 
 class ColumnRetriever:
-    def __init__(self, model_type, dataset, serialization):
+    def __init__(self, model_type, dataset, serialization, norm=True):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.serialization = serialization
         self.model_type = model_type
@@ -17,6 +17,7 @@ class ColumnRetriever:
         self._tokenizer = AutoTokenizer.from_pretrained(
             lm_map[model_type.split("-")[0]]
         )
+        self.norm = norm
 
     def _load_model(self, model_type, dataset):
         model_key = model_type.split("-")[0]
@@ -109,14 +110,32 @@ class ColumnRetriever:
             }
             sorted_similarities = sorted(
                 similarities.items(), key=lambda x: x[1], reverse=True
-            )
-            matched_columns[s_col] = sorted_similarities[:top_k]
+            )[:top_k]
+            if self.norm:
+                normalized_similarities = self._normalize_similarities(
+                    sorted_similarities
+                )
+                matched_columns[s_col] = normalized_similarities
+            else:
+                matched_columns[s_col] = sorted_similarities
 
         return matched_columns
 
     def _cosine_similarity(self, vec1, vec2):
         sim = np.dot(vec1, vec2.T) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
         return sim[0][0]
+
+    def _normalize_similarities(self, scores):
+        min_score = min(score for _, score in scores)
+        max_score = max(score for _, score in scores)
+        if max_score - min_score > 0:
+            return [
+                (col, (score - min_score) / (max_score - min_score))
+                for col, score in scores
+            ]
+        else:
+            # Normalize to 1 if all scores are equal
+            return [(col, 1.0) for col, _ in scores]
 
     def _match_columns_arctic(
         self, source_table, target_table, source_values, target_values, top_k
@@ -159,7 +178,11 @@ class ColumnRetriever:
             doc_score_pairs = [(doc, score.item()) for doc, score in doc_score_pairs]
             doc_score_pairs_sorted = sorted(
                 doc_score_pairs, key=lambda x: x[1], reverse=True
-            )
-            matched_columns[col] = doc_score_pairs_sorted[:top_k]
+            )[:top_k]
+            if self.norm:
+                normalized_scores = self._normalize_similarities(doc_score_pairs_sorted)
+                matched_columns[col] = normalized_scores
+            else:
+                matched_columns[col] = doc_score_pairs_sorted
 
         return matched_columns

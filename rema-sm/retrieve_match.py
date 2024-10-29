@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import pandas as pd
 import os
 import time
@@ -11,13 +12,48 @@ from evaluation import evaluate_matches, convert_to_valentine_format
 
 
 class RetrieveMatch:
-    def __init__(self, model_type, dataset, serialization, llm_model):
+    def __init__(self, model_type, dataset, serialization, llm_model, norm):
         self.retriever = ColumnRetriever(
-            model_type=model_type, dataset=dataset, serialization=serialization
+            model_type=model_type,
+            dataset=dataset,
+            serialization=serialization,
+            norm=norm,
         )
         self.matcher = ColumnMatcher(llm_model=llm_model)
 
-    def match(self, source_tables_path, target_tables_path, source_path, top_k, cand_k):
+    def identify_low_confidence_sources(self, matched_columns):
+        variances = []
+
+        for s_col, matches in matched_columns.items():
+            if matches:
+                _, scores = zip(*matches)
+                variances.append(np.var(scores))
+
+        # Calculate thresholds based on variances
+        if variances:
+            variance_threshold = np.percentile(
+                variances, 75
+            )  # Upper 75th percentile for variance
+
+            unconf_matched_columns = {}
+            conf_matched_columns = {}
+
+            for s_col, matches in matched_columns.items():
+                _, scores = zip(*matches)
+                variance = np.var(scores)
+
+                if variance < variance_threshold:
+                    unconf_matched_columns[s_col] = matches
+                else:
+                    conf_matched_columns[s_col] = matches
+
+            print("Variance Threshold:", variance_threshold)
+            return unconf_matched_columns, conf_matched_columns
+        else:
+            return {}, matched_columns
+
+    def match(self, source_tables_path, target_tables_path, source_path, args):
+        top_k, cand_k, conf_prune = args.top_k, args.cand_k, args.conf_prune
         source_table = pd.read_csv(os.path.join(source_tables_path, source_path))
         target_path = source_path.replace("source", "target")
         target_table = pd.read_csv(os.path.join(target_tables_path, target_path))
@@ -36,16 +72,25 @@ class RetrieveMatch:
         # print("Matched Columns:", matched_columns)
 
         if cand_k > 1:
-            matched_columns = self.matcher.rematch(
-                source_table,
-                target_table,
-                source_values,
-                target_values,
-                top_k,
-                matched_columns,
-                cand_k,
+            columns_to_refine, matched_columns = (
+                self.identify_low_confidence_sources(matched_columns)
+                if conf_prune
+                else (matched_columns, {})
             )
-            print("Refined Matches:", matched_columns)
+            unconf_size = len(columns_to_refine)
+            print("Number of columns to refine:", unconf_size)
+            if unconf_size > 0:
+                refined_columns = self.matcher.rematch(
+                    source_table,
+                    target_table,
+                    source_values,
+                    target_values,
+                    top_k,
+                    columns_to_refine,
+                    cand_k,
+                )
+                print("Refined Matches:", refined_columns)
+                matched_columns.update(refined_columns)
         runtime = time.time() - start_time
 
         converted_matches = convert_to_valentine_format(
@@ -58,15 +103,18 @@ class RetrieveMatch:
 
 def run_retrieve_match(args):
     source_tables_path, target_tables_path, gt_path = get_dataset_paths(args.dataset)
+    norm = True if args.cand_k == 1 or args.conf_prune else False
+    print("Normalization: ", norm)
     rema = RetrieveMatch(
-        args.model_type, args.dataset, args.serialization, args.llm_model
+        args.model_type, args.dataset, args.serialization, args.llm_model, norm
     )
 
-    params = (
-        f"{args.model_type}_{args.serialization}_{args.top_k}_{args.cand_k}_{args.llm_model}"
-        if args.cand_k > 1 and args.llm_model != "gpt-4-turbo-preview"
-        else f"{args.model_type}_{args.serialization}_{args.top_k}_{args.cand_k}"
-    )
+    params = f"{args.model_type}_{args.serialization}_{args.top_k}_{args.cand_k}"
+    if args.cand_k > 1:
+        params += f"_{args.llm_model}"
+    if args.conf_prune:
+        params += "_conf_prune"
+
     target_dir = f"{args.dataset}/{params}"
 
     if not os.path.exists(target_dir):
@@ -100,11 +148,7 @@ def run_retrieve_match(args):
                 continue
 
             matches, runtime, orig_matches = rema.match(
-                source_tables_path,
-                target_tables_path,
-                source_path,
-                args.top_k,
-                args.cand_k,
+                source_tables_path, target_tables_path, source_path, args
             )
             gt_rows = gt_df[gt_df["source_tab"] == source_path.split(".")[0]]
             ground_truth = [
@@ -184,15 +228,17 @@ def main():
         "--top_k", type=int, default=20, help="Number of top matches to return"
     )
     parser.add_argument(
-        "--cand_k",
-        type=int,
-        default=20,
-        help="Number of candidate matches to refine",
+        "--cand_k", type=int, default=20, help="Number of candidate matches to refine",
     )
     parser.add_argument(
         "--llm_model",
-        default="gpt-4-turbo-preview",
-        help="Type of LLM-based matcher (gpt-4-turbo-preview or gemma2:9b)",
+        default="gpt-4o-mini",
+        help="Type of LLM-based matcher (gpt-4-turbo-preview, gpt-4o-mini, gemma2:9b, llama3.1:8b-instruct-fp16)",
+    )
+    parser.add_argument(
+        "--conf_prune",
+        action="store_true",
+        help="Only refine matches with low confidence",
     )
 
     args = parser.parse_args()
