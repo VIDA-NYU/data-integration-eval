@@ -20,8 +20,20 @@ class RetrieveMatch:
             norm=norm,
         )
         self.matcher = ColumnMatcher(llm_model=llm_model)
+        
+    def _min_max_normalize(self, matched_columns):
+        normalized_columns = {}
+        for key, values in matched_columns.items():
+            # Extract only the weights for min-max normalization
+            weights = [weight for _, weight in values]
+            min_w = min(weights)
+            max_w = max(weights)
+            range_w = max_w - min_w
+            normalized_list = [(name, (weight - min_w) / range_w if range_w > 0 else 0) for name, weight in values]
+            normalized_columns[key] = normalized_list
+        return normalized_columns
 
-    def identify_low_confidence_sources(self, matched_columns):
+    def _identify_low_confidence_sources(self, matched_columns, threshold=75):
         variances = []
 
         for s_col, matches in matched_columns.items():
@@ -32,7 +44,7 @@ class RetrieveMatch:
         # Calculate thresholds based on variances
         if variances:
             variance_threshold = np.percentile(
-                variances, 75
+                variances, threshold
             )  # Upper 75th percentile for variance
 
             unconf_matched_columns = {}
@@ -73,7 +85,7 @@ class RetrieveMatch:
 
         if cand_k > 1:
             columns_to_refine, matched_columns = (
-                self.identify_low_confidence_sources(matched_columns)
+                self._identify_low_confidence_sources(matched_columns)
                 if conf_prune
                 else (matched_columns, {})
             )
@@ -91,10 +103,14 @@ class RetrieveMatch:
                 )
                 print("Refined Matches:", refined_columns)
                 matched_columns.update(refined_columns)
+        print("Matched Columns:", matched_columns)
+        normzlized_matches = self._min_max_normalize(matched_columns)
+        print("Normalized Matches:", normzlized_matches)
+        exit()
         runtime = time.time() - start_time
 
         converted_matches = convert_to_valentine_format(
-            matched_columns,
+            normzlized_matches,
             source_path.replace(".csv", ""),
             target_path.replace(".csv", ""),
         )

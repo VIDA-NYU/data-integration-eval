@@ -111,13 +111,13 @@ class ColumnRetriever:
             sorted_similarities = sorted(
                 similarities.items(), key=lambda x: x[1], reverse=True
             )[:top_k]
-            if self.norm:
-                normalized_similarities = self._normalize_similarities(
-                    sorted_similarities
-                )
-                matched_columns[s_col] = normalized_similarities
-            else:
-                matched_columns[s_col] = sorted_similarities
+            # if self.norm:
+            #     normalized_similarities = self._normalize_similarities(
+            #         sorted_similarities
+            #     )
+            #     matched_columns[s_col] = normalized_similarities
+            # else:
+            matched_columns[s_col] = sorted_similarities
 
         return matched_columns
 
@@ -179,10 +179,10 @@ class ColumnRetriever:
             doc_score_pairs_sorted = sorted(
                 doc_score_pairs, key=lambda x: x[1], reverse=True
             )[:top_k]
-            if self.norm:
-                normalized_scores = self._normalize_similarities(doc_score_pairs_sorted)
-                matched_columns[col] = normalized_scores
-            else:
-                matched_columns[col] = doc_score_pairs_sorted
+            # if self.norm:
+            #     normalized_scores = self._normalize_similarities(doc_score_pairs_sorted)
+            #     matched_columns[col] = normalized_scores
+            # else:
+            matched_columns[col] = doc_score_pairs_sorted
 
         return matched_columns
