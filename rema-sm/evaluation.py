@@ -23,8 +23,25 @@ def evaluate_matches(matches, ground_truth):
     all_metrics["MRR"] = mrr_score
     for metrix_name, score in one2one_metrics.items():
         all_metrics[f"one2one_{metrix_name}"] = score
+        
+    all_metrics["RecallAtK"] = calculate_recall_at_k(matches, ground_truth)
 
     return all_metrics
+
+
+def calculate_recall_at_k(matches, ground_truth):
+    ground_truth_set = set(frozenset(pair) for pair in ground_truth)
+    correct_matches = 0
+    for ((_, source_col), (_, target_col)), _ in matches.items():
+        match_pair = frozenset((source_col, target_col))
+        if match_pair in ground_truth_set:
+            correct_matches += 1
+            ground_truth_set.remove(match_pair)
+
+    total_ground_truth = len(ground_truth)
+    recall = correct_matches / total_ground_truth if total_ground_truth > 0 else 0
+
+    return recall
 
 
 def sort_matches(matches):

@@ -12,15 +12,20 @@ from evaluation import evaluate_matches, convert_to_valentine_format
 
 
 class RetrieveMatch:
-    def __init__(self, model_type, dataset, serialization, llm_model, norm):
+    def __init__(
+        self, model_type, dataset, serialization, augmentation, llm_model, norm, batch_size, margin
+    ):
         self.retriever = ColumnRetriever(
             model_type=model_type,
             dataset=dataset,
             serialization=serialization,
+            augmentation=augmentation,
             norm=norm,
+            batch_size=batch_size,
+            margin=margin,
         )
         self.matcher = ColumnMatcher(llm_model=llm_model)
-        
+
     def _min_max_normalize(self, matched_columns):
         normalized_columns = {}
         for key, values in matched_columns.items():
@@ -29,7 +34,10 @@ class RetrieveMatch:
             min_w = min(weights)
             max_w = max(weights)
             range_w = max_w - min_w
-            normalized_list = [(name, (weight - min_w) / range_w if range_w > 0 else 0) for name, weight in values]
+            normalized_list = [
+                (name, (weight - min_w) / range_w if range_w > 0 else 0)
+                for name, weight in values
+            ]
             normalized_columns[key] = normalized_list
         return normalized_columns
 
@@ -67,8 +75,11 @@ class RetrieveMatch:
     def match(self, source_tables_path, target_tables_path, source_path, args):
         top_k, cand_k, conf_prune = args.top_k, args.cand_k, args.conf_prune
         source_table = pd.read_csv(os.path.join(source_tables_path, source_path))
-        target_path = source_path.replace("source", "target")
-        target_table = pd.read_csv(os.path.join(target_tables_path, target_path))
+        if args.dataset in ["gdc"]:
+            target_path = os.listdir(target_tables_path)[0]
+        else:
+            target_path = source_path.replace("source", "target")
+        target_table = pd.read_csv(os.path.join(target_tables_path, target_path), low_memory=False)
         source_table, target_table = process_tables(source_table, target_table)
 
         start_time = time.time()
@@ -97,20 +108,18 @@ class RetrieveMatch:
                     target_table,
                     source_values,
                     target_values,
-                    top_k,
-                    columns_to_refine,
                     cand_k,
+                    columns_to_refine,
                 )
-                print("Refined Matches:", refined_columns)
                 matched_columns.update(refined_columns)
-        print("Matched Columns:", matched_columns)
-        normzlized_matches = self._min_max_normalize(matched_columns)
-        print("Normalized Matches:", normzlized_matches)
-        exit()
+                # add cand_k: target_col to matched_columns with 0.0 score
+        # print("Matched Columns:", matched_columns)
+        # normzlized_matches = self._min_max_normalize(matched_columns)
+        # print("Normalized Matches:", normzlized_matches)
         runtime = time.time() - start_time
 
         converted_matches = convert_to_valentine_format(
-            normzlized_matches,
+            matched_columns,
             source_path.replace(".csv", ""),
             target_path.replace(".csv", ""),
         )
@@ -119,13 +128,25 @@ class RetrieveMatch:
 
 def run_retrieve_match(args):
     source_tables_path, target_tables_path, gt_path = get_dataset_paths(args.dataset)
-    norm = True if args.cand_k == 1 or args.conf_prune else False
+    print("Source Tables Path:", source_tables_path)
+    print("Target Tables Path:", target_tables_path)
+    if args.disable_norm:
+        norm = False
+    else:
+        norm = True if args.cand_k == 1 or args.conf_prune else False
     print("Normalization: ", norm)
     rema = RetrieveMatch(
-        args.model_type, args.dataset, args.serialization, args.llm_model, norm
+        args.model_type,
+        args.dataset,
+        args.serialization,
+        args.augmentation,
+        args.llm_model,
+        norm,
+        args.batch_size,
+        args.margin,
     )
 
-    params = f"{args.model_type}_{args.serialization}_{args.top_k}_{args.cand_k}"
+    params = f"{args.model_type}_{args.serialization}_{args.top_k}_{args.cand_k}_{args.margin}"
     if args.cand_k > 1:
         params += f"_{args.llm_model}"
     if args.conf_prune:
@@ -142,6 +163,7 @@ def run_retrieve_match(args):
         "tablename",
         "top_k",
         "runtime",
+        "RecallAtK",
         "Precision",
         "F1Score",
         "Recall",
@@ -155,70 +177,74 @@ def run_retrieve_match(args):
         "one2one_RecallAtSizeofGroundTruth",
     ]
 
-    if args.dataset not in ["gdc"]:
-        results = []
-        for source_path in os.listdir(source_tables_path):
-            matches_filename = f"{target_dir}/{source_path.split('.')[0]}_matches.json"
+    results = []
+    for source_path in os.listdir(source_tables_path):
+        matches_filename = f"{target_dir}/{source_path.split('.')[0]}_matches.json"
 
-            if os.path.exists(matches_filename):
-                continue
+        # if os.path.exists(matches_filename):
+        #     continue
 
-            matches, runtime, orig_matches = rema.match(
-                source_tables_path, target_tables_path, source_path, args
-            )
-            gt_rows = gt_df[gt_df["source_tab"] == source_path.split(".")[0]]
-            ground_truth = [
-                (row["source_col"], row["target_col"]) for _, row in gt_rows.iterrows()
-            ]
+        matches, runtime, orig_matches = rema.match(
+            source_tables_path, target_tables_path, source_path, args
+        )
+        gt_rows = gt_df[gt_df["source_tab"] == source_path.split(".")[0]]
+        ground_truth = [
+            (row["source_col"], row["target_col"]) for _, row in gt_rows.iterrows()
+        ]
+        # if ground truth is empty, print source table
+        if not ground_truth:
+            print("Source Table:", source_path)
+            exit()
+        # print("Ground Truth:", ground_truth)
+        metrics = evaluate_matches(matches, ground_truth)
+        print("Metrics:", metrics)
+        # exit()
 
-            print("Ground Truth:", ground_truth)
-            metrics = evaluate_matches(matches, ground_truth)
-            print("Metrics:", metrics)
-            # exit()
+        metrics.update(
+            {
+                "usecase": args.dataset,
+                "tablename": source_path.split(".")[0],
+                "top_k": args.top_k,
+                "runtime": runtime * 1000,
+            }
+        )
 
-            metrics.update(
-                {
-                    "usecase": args.dataset,
-                    "tablename": source_path.split(".")[0],
-                    "top_k": args.top_k,
-                    "runtime": runtime * 1000,
-                }
-            )
+        results.append(metrics)
 
-            results.append(metrics)
+        with open(matches_filename, "w") as f:
+            json.dump(orig_matches, f, indent=4, default=default_converter)
 
-            with open(matches_filename, "w") as f:
-                json.dump(orig_matches, f, indent=4, default=default_converter)
+    all_metrics = pd.DataFrame(results, columns=columns, index=None)
 
-        all_metrics = pd.DataFrame(results, columns=columns, index=None)
+    mertics_filename = f"{target_dir}/metrics.csv"
+    if os.path.exists(mertics_filename):
+        all_metrics_df = pd.read_csv(mertics_filename)
+        all_metrics = pd.concat([all_metrics_df, all_metrics], ignore_index=True)
+        all_metrics.to_csv(mertics_filename, index=False)
+    else:
+        all_metrics.to_csv(mertics_filename, index=False)
 
-        mertics_filename = f"{target_dir}/metrics.csv"
-        if os.path.exists(mertics_filename):
-            all_metrics_df = pd.read_csv(mertics_filename)
-            all_metrics = pd.concat([all_metrics_df, all_metrics], ignore_index=True)
-            all_metrics.to_csv(mertics_filename, index=False)
-        else:
-            all_metrics.to_csv(mertics_filename, index=False)
+    avg_metrics = all_metrics.mean(numeric_only=True)
+    # print("Average Metrics:", avg_metrics)
+    avg_metrics_filename = f"{target_dir}/avg_metrics.csv"
+    avg_metrics_df = avg_metrics.to_frame().T
+    avg_metrics_df.to_csv(avg_metrics_filename, mode="a", index=False)
 
-        avg_metrics = all_metrics.mean(numeric_only=True)
-        print("Average Metrics:", avg_metrics)
-        avg_metrics_filename = f"{target_dir}/avg_metrics.csv"
-        avg_metrics_df = avg_metrics.to_frame().T
-        avg_metrics_df.to_csv(avg_metrics_filename, mode="a", index=False)
-
-        data, usecase = args.dataset.split("-")
+    data = args.dataset
+    if "-" in args.dataset:
+        data, usecase = data.split("-")
         avg_metrics_df.insert(0, "usecase", usecase)
-        all_avg_metrics_filename = f"{data}-all/{params}.csv"
-        if os.path.exists(all_avg_metrics_filename):
-            all_avg_metrics_df = pd.read_csv(all_avg_metrics_filename)
-            all_avg_metrics_df = pd.concat(
-                [all_avg_metrics_df, avg_metrics_df], ignore_index=True
-            )
-            all_avg_metrics_df.to_csv(all_avg_metrics_filename, index=False)
-        else:
-            if not os.path.exists(f"{data}-all"):
-                os.makedirs(f"{data}-all")
-            avg_metrics_df.to_csv(all_avg_metrics_filename, index=False)
+    all_avg_metrics_filename = f"{data}-all/{params}.csv"
+    if os.path.exists(all_avg_metrics_filename):
+        all_avg_metrics_df = pd.read_csv(all_avg_metrics_filename)
+        all_avg_metrics_df = pd.concat(
+            [all_avg_metrics_df, avg_metrics_df], ignore_index=True
+        )
+        all_avg_metrics_df.to_csv(all_avg_metrics_filename, index=False)
+    else:
+        if not os.path.exists(f"{data}-all"):
+            os.makedirs(f"{data}-all")
+        avg_metrics_df.to_csv(all_avg_metrics_filename, index=False)
 
 
 def main():
@@ -244,7 +270,10 @@ def main():
         "--top_k", type=int, default=20, help="Number of top matches to return"
     )
     parser.add_argument(
-        "--cand_k", type=int, default=20, help="Number of candidate matches to refine",
+        "--cand_k",
+        type=int,
+        default=20,
+        help="Number of candidate matches to refine",
     )
     parser.add_argument(
         "--llm_model",
@@ -255,6 +284,22 @@ def main():
         "--conf_prune",
         action="store_true",
         help="Only refine matches with low confidence",
+    )
+    parser.add_argument(
+        "--augmentation",
+        default="exact_semantic",
+        help="Augmentation type (exact, semantic, exact_semantic)",
+    )
+    parser.add_argument(
+        "--disable_norm",
+        action="store_true",
+        help="Disable min-max normalization for column weights",
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=64, help="Batch size for retrieval"
+    )
+    parser.add_argument(
+        "--margin", type=float, default=0.5, help="Model training margin"
     )
 
     args = parser.parse_args()

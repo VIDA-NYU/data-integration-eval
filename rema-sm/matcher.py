@@ -30,9 +30,8 @@ class ColumnMatcher:
         target_table,
         source_values,
         target_values,
-        top_k,
-        matched_columns,
         cand_k,
+        matched_columns,
         score_based=True,
     ):
         refined_matches = {}
@@ -50,23 +49,33 @@ class ColumnMatcher:
                 + ", Sample values: ["
                 + ",".join(target_values[target_col])
                 + "]"
-                for target_col, _ in target_col_scores
+                for target_col, _ in target_col_scores[:cand_k]
+            ]
+            unselected_cols = [
+                target_col
+                for target_col, _ in target_col_scores[cand_k:]
             ]
             targets = "\n".join(target_cols)
             other_cols = ",".join(
                 [col for col in source_table.columns if col != source_col]
             )
-            if score_based:
-                while True:
-                    refined_match = self._get_matches_w_score(cand, targets, other_cols)
-                    refined_match = self._parse_scored_matches(refined_match)
-                    if refined_match is not None:
-                        break
-                    print("Retrying...")
-            else:
-                refined_match = self._get_matches(cand, targets, top_k)
-                refined_match = refined_match.split("; ")
+            # print(unselected_cols)
+            # if score_based:
+            while True:
+                refined_match = self._get_matches_w_score(cand, targets, other_cols)
+                refined_match = self._parse_scored_matches(refined_match)
+                if refined_match is not None:
+                    break
+                print("Retrying...")
+            # else:
+            #     refined_match = self._get_matches(cand, targets, top_k)
+            #     refined_match = refined_match.split("; ")
             refined_matches[source_col] = refined_match
+            # add unselected columns to the refined_matches with a score of 0
+            for unselected_col in unselected_cols:
+                refined_matches[source_col].append((unselected_col, 0.00))
+            # print(refined_matches)
+            # exit()
         return refined_matches
 
     def _get_prompt(self, cand, targets):
@@ -92,7 +101,10 @@ Candidate Column:"
         return prompt
 
     def _get_matches_w_score(
-        self, cand, targets, other_cols,
+        self,
+        cand,
+        targets,
+        other_cols,
     ):
         prompt = self._get_prompt(cand, targets)
         # print(prompt)
@@ -102,17 +114,28 @@ Candidate Column:"
                     "role": "system",
                     "content": "You are an AI trained to perform schema matching by providing similarity scores.",
                 },
-                {"role": "user", "content": prompt,},
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
             ]
             # print(messages[1]["content"])
             response = self.client.chat.completions.create(
-                model=self.llm_model, messages=messages, temperature=0.3,
+                model=self.llm_model,
+                messages=messages,
+                temperature=0.3,
             )
             matches = response.choices[0].message.content
 
         elif self.llm_model in ["gemma2:9b", "llama3.1:8b-instruct-fp16"]:
             response = self.client.chat(
-                model=self.llm_model, messages=[{"role": "user", "content": prompt,},],
+                model=self.llm_model,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    },
+                ],
             )
             matches = response["message"]["content"]
         print(matches)
