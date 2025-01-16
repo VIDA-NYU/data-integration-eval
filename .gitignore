@@ -15,6 +15,10 @@ other_tests/
 journal/
 results/
 
+gdc-benchmark/data/input-tables
+gdc-benchmark/data/downloads
+
+
 # C extensions
 *.so
 
