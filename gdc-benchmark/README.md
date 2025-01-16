@@ -27,7 +27,7 @@ openpyxl>=3.1.0  # Required for Excel file handling
 │   └── input-tables/   # Processed CSV files
 ├── papers_info.json    # Dataset configuration file
 ├── requirements.txt
-└── process_data.py     # Main script
+└── gdc_download.py     # Main script
 ```
 
 ## Configuration
@@ -48,7 +48,7 @@ The script expects a `papers_info.json` file with the following structure:
 1. Create the `papers_info.json` file with your dataset configurations (Or use the one provided)
 2. Run the script:
    ```bash
-   python process_data.py
+   python gdc_download.py
    ```
 
 <!-- ## Features
